@@ -310,7 +310,7 @@ export function Sidebar() {
           onClick={() => setProjectsCollapsed(!projectsCollapsed)}
           className="group flex items-center px-3 py-2.5 rounded-xl hover:bg-[#2a2a2a] transition-all cursor-pointer"
         >
-          <span className="text-[14px] text-text-tertiary leading-none">Projects</span>
+          <span className="text-[14px] font-medium text-text-tertiary leading-none">Projects</span>
           <IconChevronRight
             size={16}
             className={cn(
@@ -329,8 +329,11 @@ export function Sidebar() {
         </div>
 
         {/* Projects list */}
-        {!projectsCollapsed && (
-          <nav className="space-y-0.5 mt-1">
+        <div className={cn(
+          "grid transition-all duration-200 ease-out",
+          projectsCollapsed ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100"
+        )}>
+          <nav className="space-y-0.5 mt-1 overflow-hidden">
             {workspaces.length === 0 ? (
               <Link
                 href="/new"
@@ -386,7 +389,10 @@ export function Sidebar() {
                           e.stopPropagation();
                           setOpenMenu(openMenu === `project-${workspace.id}` ? null : `project-${workspace.id}`);
                         }}
-                        className="p-1.5 rounded-lg text-text-primary hover:bg-[#3a3a3a] opacity-0 group-hover:opacity-100 transition-all ml-1"
+                        className={cn(
+                          "p-1.5 rounded-lg text-text-primary hover:bg-[#3a3a3a] transition-all ml-1",
+                          openMenu === `project-${workspace.id}` ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                        )}
                       >
                         <IconMoreHorizontal size={14} />
                       </button>
@@ -411,55 +417,64 @@ export function Sidebar() {
                     </div>
 
                     {/* Tasks under this project */}
-                    {isExpanded && projectTasks.length > 0 && (
-                      <div className="ml-6 space-y-0.5 mt-0.5">
-                        {projectTasks.map((task) => {
-                          const isActive = currentTask?.id === task.id;
-                          return (
-                            <div
-                              key={task.id}
-                              onClick={() => openTask(task)}
-                              className={cn(
-                                "relative group flex items-center gap-2 w-full px-3 py-2 rounded-xl transition-all cursor-pointer",
-                                isActive
-                                  ? 'bg-[#3a3a3a] text-text-primary'
-                                  : 'text-text-secondary hover:bg-[#2a2a2a] hover:text-text-primary'
-                              )}
-                            >
-                              <TaskIcon />
-                              <span className="text-[13px] truncate flex-1">
-                                {task.title || 'Untitled task'}
-                              </span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setOpenMenu(openMenu === `task-${task.id}` ? null : `task-${task.id}`);
-                                }}
-                                className="p-1.5 rounded-lg text-text-primary hover:bg-[#3a3a3a] opacity-0 group-hover:opacity-100 transition-all"
+                    {projectTasks.length > 0 && (
+                      <div className={cn(
+                        "grid transition-all duration-200 ease-out ml-6",
+                        !isExpanded ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100"
+                      )}>
+                        <div className="space-y-0.5 mt-0.5 overflow-hidden">
+                          {projectTasks.map((task) => {
+                            const isActive = currentTask?.id === task.id;
+                            return (
+                              <div
+                                key={task.id}
+                                onClick={() => openTask(task)}
+                                className={cn(
+                                  "relative group flex items-center gap-2 w-full px-3 py-2 rounded-xl transition-all cursor-pointer",
+                                  isActive
+                                    ? 'bg-[#3a3a3a] text-text-primary'
+                                    : 'text-text-secondary hover:bg-[#2a2a2a] hover:text-text-primary'
+                                )}
                               >
-                                <IconMoreHorizontal size={14} />
-                              </button>
-                              <DropdownMenu
-                                isOpen={openMenu === `task-${task.id}`}
-                                onClose={() => setOpenMenu(null)}
-                                position="right"
-                                items={[
-                                  {
-                                    label: 'Rename',
-                                    icon: <IconEdit size={16} />,
-                                    onClick: () => {/* TODO */}
-                                  },
-                                  {
-                                    label: 'Delete',
-                                    icon: <IconTrash size={16} />,
-                                    onClick: () => deleteTask(task),
-                                    danger: true
-                                  }
-                                ]}
-                              />
-                            </div>
-                          );
-                        })}
+                                <TaskIcon />
+                                <span className="text-[13px] truncate flex-1">
+                                  {task.title || 'Untitled task'}
+                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenu(openMenu === `task-${task.id}` ? null : `task-${task.id}`);
+                                  }}
+                                  className={cn(
+                                    "p-1.5 rounded-lg text-text-primary transition-all",
+                                    isActive ? "hover:bg-[#4a4a4a]" : "hover:bg-[#3a3a3a]",
+                                    openMenu === `task-${task.id}` ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                                  )}
+                                >
+                                  <IconMoreHorizontal size={14} />
+                                </button>
+                                <DropdownMenu
+                                  isOpen={openMenu === `task-${task.id}`}
+                                  onClose={() => setOpenMenu(null)}
+                                  position="right"
+                                  items={[
+                                    {
+                                      label: 'Rename',
+                                      icon: <IconEdit size={16} />,
+                                      onClick: () => {/* TODO */}
+                                    },
+                                    {
+                                      label: 'Delete',
+                                      icon: <IconTrash size={16} />,
+                                      onClick: () => deleteTask(task),
+                                      danger: true
+                                    }
+                                  ]}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -467,7 +482,7 @@ export function Sidebar() {
               })
             )}
           </nav>
-        )}
+        </div>
       </div>
       )}
 
@@ -479,7 +494,7 @@ export function Sidebar() {
           onClick={() => setTasksCollapsed(!tasksCollapsed)}
           className="group flex items-center px-3 py-2.5 rounded-xl hover:bg-[#2a2a2a] transition-all cursor-pointer"
         >
-          <span className="text-[14px] text-text-tertiary leading-none">All tasks</span>
+          <span className="text-[14px] font-medium text-text-tertiary leading-none">All tasks</span>
           <IconChevronRight
             size={16}
             className={cn(
@@ -500,8 +515,11 @@ export function Sidebar() {
         </div>
 
         {/* All tasks list */}
-        {!tasksCollapsed && (
-          <nav className="flex-1 overflow-y-auto space-y-0.5 mt-1">
+        <div className={cn(
+          "grid transition-all duration-200 ease-out flex-1",
+          tasksCollapsed ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100"
+        )}>
+          <nav className="overflow-y-auto space-y-0.5 mt-1 overflow-hidden">
             {allTasks.length === 0 ? null : (
               [...allTasks].reverse().map((task) => {
                 const isActive = currentTask?.id === task.id;
@@ -525,7 +543,11 @@ export function Sidebar() {
                         e.stopPropagation();
                         setOpenMenu(openMenu === `alltask-${task.id}` ? null : `alltask-${task.id}`);
                       }}
-                      className="p-1.5 rounded-lg text-text-primary hover:bg-[#3a3a3a] opacity-0 group-hover:opacity-100 transition-all"
+                      className={cn(
+                        "p-1.5 rounded-lg text-text-primary transition-all",
+                        isActive ? "hover:bg-[#4a4a4a]" : "hover:bg-[#3a3a3a]",
+                        openMenu === `alltask-${task.id}` ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                      )}
                     >
                       <IconMoreHorizontal size={14} />
                     </button>
@@ -551,7 +573,7 @@ export function Sidebar() {
               })
             )}
           </nav>
-        )}
+        </div>
       </div>
       )}
 

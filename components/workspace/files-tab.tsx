@@ -4,10 +4,10 @@ import { useRef } from 'react';
 import { IconPlus, IconFolder } from '@/components/ui/icons';
 import { useStore } from '@/lib/store';
 import { cn, formatBytes, generateId } from '@/lib/utils';
-import type { Workspace, WorkspaceFile } from '@/lib/types';
+import type { Project, ProjectFile } from '@/lib/types';
 
 interface FilesTabProps {
-  workspace: Workspace;
+  project: Project;
 }
 
 // File type icon
@@ -51,15 +51,15 @@ function FileIcon({ type, className }: { type: string; className?: string }) {
   );
 }
 
-export function FilesTab({ workspace }: FilesTabProps) {
-  const { updateWorkspace } = useStore();
+export function FilesTab({ project }: FilesTabProps) {
+  const { updateProject } = useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    const newFiles: WorkspaceFile[] = Array.from(files).map((file) => ({
+    const newFiles: ProjectFile[] = Array.from(files).map((file) => ({
       id: generateId(),
       name: file.name,
       path: `/${file.name}`,
@@ -67,18 +67,18 @@ export function FilesTab({ workspace }: FilesTabProps) {
       type: file.type || 'application/octet-stream',
     }));
 
-    updateWorkspace(workspace.id, {
-      files: [...workspace.files, ...newFiles],
+    updateProject(project.id, {
+      files: [...project.files, ...newFiles],
     });
 
     // Save to localStorage
-    const stored = localStorage.getItem('swarmkit-workspaces');
+    const stored = localStorage.getItem('swarmkit-projects');
     if (stored) {
-      const workspaces = JSON.parse(stored);
-      const idx = workspaces.findIndex((w: Workspace) => w.id === workspace.id);
+      const projects = JSON.parse(stored);
+      const idx = projects.findIndex((p: Project) => p.id === project.id);
       if (idx !== -1) {
-        workspaces[idx].files = [...workspace.files, ...newFiles];
-        localStorage.setItem('swarmkit-workspaces', JSON.stringify(workspaces));
+        projects[idx].files = [...project.files, ...newFiles];
+        localStorage.setItem('swarmkit-projects', JSON.stringify(projects));
       }
     }
 
@@ -89,22 +89,22 @@ export function FilesTab({ workspace }: FilesTabProps) {
   };
 
   const handleDeleteFile = (fileId: string) => {
-    const updatedFiles = workspace.files.filter((f) => f.id !== fileId);
-    updateWorkspace(workspace.id, { files: updatedFiles });
+    const updatedFiles = project.files.filter((f) => f.id !== fileId);
+    updateProject(project.id, { files: updatedFiles });
 
     // Save to localStorage
-    const stored = localStorage.getItem('swarmkit-workspaces');
+    const stored = localStorage.getItem('swarmkit-projects');
     if (stored) {
-      const workspaces = JSON.parse(stored);
-      const idx = workspaces.findIndex((w: Workspace) => w.id === workspace.id);
+      const projects = JSON.parse(stored);
+      const idx = projects.findIndex((p: Project) => p.id === project.id);
       if (idx !== -1) {
-        workspaces[idx].files = updatedFiles;
-        localStorage.setItem('swarmkit-workspaces', JSON.stringify(workspaces));
+        projects[idx].files = updatedFiles;
+        localStorage.setItem('swarmkit-projects', JSON.stringify(projects));
       }
     }
   };
 
-  if (workspace.files.length === 0) {
+  if (project.files.length === 0) {
     return (
       <div className="h-full relative">
         <div className="absolute top-4 right-4">
@@ -135,7 +135,7 @@ export function FilesTab({ workspace }: FilesTabProps) {
       {/* Header with upload button */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between">
         <span className="text-[13px] text-text-tertiary">
-          {workspace.files.length} {workspace.files.length === 1 ? 'file' : 'files'}
+          {project.files.length} {project.files.length === 1 ? 'file' : 'files'}
         </span>
         <button
           onClick={() => fileInputRef.current?.click()}
@@ -156,7 +156,7 @@ export function FilesTab({ workspace }: FilesTabProps) {
       {/* Files list */}
       <div className="flex-1 overflow-y-auto px-2 pb-2">
         <div className="space-y-1">
-          {workspace.files.map((file) => (
+          {project.files.map((file) => (
             <div
               key={file.id}
               className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-bg-overlay transition-colors"

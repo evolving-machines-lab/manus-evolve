@@ -11,26 +11,34 @@ import {
   IconAttach,
   IconPlug,
   IconSkill,
+  IconX,
+  IconCheck,
 } from '@/components/ui/icons';
 import { useStore } from '@/lib/store';
 import { cn, generateId } from '@/lib/utils';
-import type { Task, Workspace, Message, ProgressItem } from '@/lib/types';
+import type { Task, Project, Message, ProgressItem } from '@/lib/types';
 import ReactMarkdown from 'react-markdown';
+import { AVAILABLE_SKILLS } from '@/lib/skills';
 
 interface TaskViewProps {
   task: Task | null;
-  workspace: Workspace | null;
+  project: Project | null;
   onOpenPanel?: (tab?: 'files' | 'artifacts' | 'browser') => void;
   rightPanelOpen?: boolean;
 }
 
-export function TaskView({ task, workspace, onOpenPanel, rightPanelOpen }: TaskViewProps) {
+export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskViewProps) {
   const [input, setInput] = useState('');
   const [previewCollapsed, setPreviewCollapsed] = useState(false);
+  const [showIntegrations, setShowIntegrations] = useState(false);
+  const [showSkills, setShowSkills] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const integrationsRef = useRef<HTMLDivElement>(null);
+  const skillsRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { updateTask } = useStore();
+  const { updateTask, integrations } = useStore();
+  const connectedIntegrations = integrations.filter(i => i.connected);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -42,6 +50,20 @@ export function TaskView({ task, workspace, onOpenPanel, rightPanelOpen }: TaskV
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
     }
   }, [input]);
+
+  // Close popups on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (integrationsRef.current && !integrationsRef.current.contains(e.target as Node)) {
+        setShowIntegrations(false);
+      }
+      if (skillsRef.current && !skillsRef.current.contains(e.target as Node)) {
+        setShowSkills(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSubmit = async () => {
     if (!input.trim() || !task) return;
@@ -60,7 +82,7 @@ export function TaskView({ task, workspace, onOpenPanel, rightPanelOpen }: TaskV
       title: task.title === 'New Task' ? input.trim().slice(0, 50) : task.title,
       prompt: task.prompt || input.trim(),
       progress: [
-        { id: generateId(), content: 'Analyzing workspace context', status: 'in_progress' },
+        { id: generateId(), content: 'Analyzing project context', status: 'in_progress' },
         { id: generateId(), content: 'Processing request', status: 'pending' },
       ],
     };
@@ -68,7 +90,7 @@ export function TaskView({ task, workspace, onOpenPanel, rightPanelOpen }: TaskV
     updateTask(task.id, updatedTask);
 
     // Save to localStorage (handle standalone vs project tasks)
-    const storageKey = workspace ? `swarmkit-tasks-${workspace.id}` : 'swarmkit-tasks-standalone';
+    const storageKey = project ? `swarmkit-tasks-${project.id}` : 'swarmkit-tasks-standalone';
     const stored = localStorage.getItem(storageKey);
     const tasks = stored ? JSON.parse(stored) : [];
     const idx = tasks.findIndex((t: Task) => t.id === task.id);
@@ -79,26 +101,9 @@ export function TaskView({ task, workspace, onOpenPanel, rightPanelOpen }: TaskV
 
     setInput('');
 
-    // Simulated response - in real app this would call SwarmKit SDK
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: generateId(),
-        role: 'assistant',
-        content: 'I\'ll help you with that. Let me work on this task...',
-        timestamp: new Date().toISOString(),
-      };
-
-      const progress: ProgressItem[] = [
-        { id: generateId(), content: 'Analyzing workspace context', status: 'completed' },
-        { id: generateId(), content: 'Processing request', status: 'completed' },
-      ];
-
-      updateTask(task.id, {
-        messages: [...updatedMessages, assistantMessage],
-        progress,
-        status: 'completed',
-      });
-    }, 1500);
+    // TODO: Call SwarmKit SDK here
+    // The task is now in 'running' state with progress showing
+    // Real implementation will stream responses and update progress
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -111,17 +116,17 @@ export function TaskView({ task, workspace, onOpenPanel, rightPanelOpen }: TaskV
   const completedSteps = task?.progress.filter((p) => p.status === 'completed').length || 0;
   const totalSteps = task?.progress.length || 0;
   const isRunning = task?.status === 'running';
-  const filesCount = workspace?.files.length || 0;
+  const filesCount = project?.files.length || 0;
   const artifactsCount = task?.artifacts.length || 0;
 
   const handleCreateTask = () => {
     if (!input.trim()) return;
 
-    const workspaceId = workspace?.id || 'standalone';
+    const projectId = project?.id || 'standalone';
 
     const newTask: Task = {
       id: generateId(),
-      workspaceId,
+      projectId,
       title: input.trim().slice(0, 50),
       prompt: input.trim(),
       status: 'running',
@@ -146,7 +151,7 @@ export function TaskView({ task, workspace, onOpenPanel, rightPanelOpen }: TaskV
     setCurrentTask(newTask);
 
     // Save to localStorage
-    const storageKey = workspace ? `swarmkit-tasks-${workspace.id}` : 'swarmkit-tasks-standalone';
+    const storageKey = project ? `swarmkit-tasks-${project.id}` : 'swarmkit-tasks-standalone';
     const stored = localStorage.getItem(storageKey);
     const tasks = stored ? JSON.parse(stored) : [];
     tasks.push(newTask);
@@ -154,26 +159,9 @@ export function TaskView({ task, workspace, onOpenPanel, rightPanelOpen }: TaskV
 
     setInput('');
 
-    // Simulated response
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: generateId(),
-        role: 'assistant',
-        content: 'I\'ll help you with that. Let me work on this task...',
-        timestamp: new Date().toISOString(),
-      };
-
-      const progress: ProgressItem[] = [
-        { id: generateId(), content: 'Analyzing workspace context', status: 'completed' },
-        { id: generateId(), content: 'Processing request', status: 'completed' },
-      ];
-
-      updateTask(newTask.id, {
-        messages: [...newTask.messages, assistantMessage],
-        progress,
-        status: 'completed',
-      });
-    }, 1500);
+    // TODO: Call SwarmKit SDK here
+    // The task is now in 'running' state with progress showing
+    // Real implementation will stream responses and update progress
   };
 
   const handleEmptyKeyDown = (e: React.KeyboardEvent) => {
@@ -201,7 +189,7 @@ export function TaskView({ task, workspace, onOpenPanel, rightPanelOpen }: TaskV
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleEmptyKeyDown}
-              placeholder="Send message to Async"
+              placeholder="Send message to Manus"
               rows={1}
               className="w-full bg-transparent resize-none text-[15px] text-text-primary placeholder:text-text-tertiary focus:outline-none min-h-[28px] max-h-[200px] mb-3"
             />
@@ -213,15 +201,74 @@ export function TaskView({ task, workspace, onOpenPanel, rightPanelOpen }: TaskV
                 >
                   <IconAttach size={18} />
                 </button>
-                <button className="w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors">
-                  <IconPlug size={18} />
-                </button>
-                <button className="w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors">
-                  <IconSkill size={18} />
-                </button>
+                <div className="relative" ref={integrationsRef}>
+                  <button
+                    onClick={() => setShowIntegrations(!showIntegrations)}
+                    className={cn(
+                      "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center transition-colors",
+                      showIntegrations ? "text-text-primary bg-bg-subtle" : "text-text-tertiary hover:text-text-secondary"
+                    )}
+                  >
+                    <IconPlug size={18} />
+                  </button>
+                  {showIntegrations && (
+                    <div className="absolute bottom-12 left-0 w-64 p-3 rounded-xl border border-border-subtle bg-bg-surface shadow-lg z-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[13px] font-medium text-text-primary">Integrations</span>
+                        <button onClick={() => setShowIntegrations(false)} className="p-1 text-text-tertiary hover:text-text-secondary">
+                          <IconX size={14} />
+                        </button>
+                      </div>
+                      {connectedIntegrations.length === 0 ? (
+                        <p className="text-[12px] text-text-tertiary py-2">No integrations connected. Connect in Settings.</p>
+                      ) : (
+                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                          {connectedIntegrations.map(i => (
+                            <div key={i.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-bg-overlay">
+                              <IconCheck size={14} className="text-green-500" />
+                              <span className="text-[13px] text-text-primary">{i.displayName}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="relative" ref={skillsRef}>
+                  <button
+                    onClick={() => setShowSkills(!showSkills)}
+                    className={cn(
+                      "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center transition-colors",
+                      showSkills ? "text-text-primary bg-bg-subtle" : "text-text-tertiary hover:text-text-secondary"
+                    )}
+                  >
+                    <IconSkill size={18} />
+                  </button>
+                  {showSkills && (
+                    <div className="absolute bottom-12 left-0 w-72 p-3 rounded-xl border border-border-subtle bg-bg-surface shadow-lg z-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[13px] font-medium text-text-primary">Skills</span>
+                        <button onClick={() => setShowSkills(false)} className="p-1 text-text-tertiary hover:text-text-secondary">
+                          <IconX size={14} />
+                        </button>
+                      </div>
+                      <div className="space-y-1 max-h-48 overflow-y-auto">
+                        {AVAILABLE_SKILLS.slice(0, 8).map(s => (
+                          <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-bg-overlay cursor-pointer">
+                            <IconSkill size={14} className="text-text-tertiary" />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[13px] text-text-primary block">{s.displayName}</span>
+                              <span className="text-[11px] text-text-tertiary truncate block">{s.description}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2">
-                <button className="w-10 h-10 rounded-full flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors">
+                <button className="w-10 h-10 rounded-full flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors" title="Voice input (coming soon)">
                   <IconMic size={18} />
                 </button>
                 <button
@@ -400,14 +447,14 @@ export function TaskView({ task, workspace, onOpenPanel, rightPanelOpen }: TaskV
                     {/* Title + status */}
                     <div className="flex-1 pt-1">
                       <h3 className="text-[20px] font-medium text-text-primary mb-2">
-                        Async's computer
+                        Manus's computer
                       </h3>
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-lg bg-bg-overlay flex items-center justify-center">
                           <IconTerminal size={16} className="text-text-secondary" />
                         </div>
                         <span className="text-[14px] text-text-secondary">
-                          Async is using <span className="text-text-primary">Terminal</span>
+                          Manus is using <span className="text-text-primary">Terminal</span>
                         </span>
                       </div>
                     </div>
@@ -477,7 +524,7 @@ export function TaskView({ task, workspace, onOpenPanel, rightPanelOpen }: TaskV
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Send message to Async"
+              placeholder="Send message to Manus"
               rows={1}
               className="w-full bg-transparent resize-none text-[15px] text-text-primary placeholder:text-text-tertiary focus:outline-none min-h-[28px] max-h-[200px] mb-3"
               disabled={isRunning}
@@ -490,15 +537,74 @@ export function TaskView({ task, workspace, onOpenPanel, rightPanelOpen }: TaskV
                 >
                   <IconAttach size={18} />
                 </button>
-                <button className="w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors">
-                  <IconPlug size={18} />
-                </button>
-                <button className="w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors">
-                  <IconSkill size={18} />
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowIntegrations(!showIntegrations)}
+                    className={cn(
+                      "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center transition-colors",
+                      showIntegrations ? "text-text-primary bg-bg-subtle" : "text-text-tertiary hover:text-text-secondary"
+                    )}
+                  >
+                    <IconPlug size={18} />
+                  </button>
+                  {showIntegrations && (
+                    <div className="absolute bottom-12 left-0 w-64 p-3 rounded-xl border border-border-subtle bg-bg-surface shadow-lg z-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[13px] font-medium text-text-primary">Integrations</span>
+                        <button onClick={() => setShowIntegrations(false)} className="p-1 text-text-tertiary hover:text-text-secondary">
+                          <IconX size={14} />
+                        </button>
+                      </div>
+                      {connectedIntegrations.length === 0 ? (
+                        <p className="text-[12px] text-text-tertiary py-2">No integrations connected. Connect in Settings.</p>
+                      ) : (
+                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                          {connectedIntegrations.map(i => (
+                            <div key={i.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-bg-overlay">
+                              <IconCheck size={14} className="text-green-500" />
+                              <span className="text-[13px] text-text-primary">{i.displayName}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowSkills(!showSkills)}
+                    className={cn(
+                      "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center transition-colors",
+                      showSkills ? "text-text-primary bg-bg-subtle" : "text-text-tertiary hover:text-text-secondary"
+                    )}
+                  >
+                    <IconSkill size={18} />
+                  </button>
+                  {showSkills && (
+                    <div className="absolute bottom-12 left-0 w-72 p-3 rounded-xl border border-border-subtle bg-bg-surface shadow-lg z-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[13px] font-medium text-text-primary">Skills</span>
+                        <button onClick={() => setShowSkills(false)} className="p-1 text-text-tertiary hover:text-text-secondary">
+                          <IconX size={14} />
+                        </button>
+                      </div>
+                      <div className="space-y-1 max-h-48 overflow-y-auto">
+                        {AVAILABLE_SKILLS.slice(0, 8).map(s => (
+                          <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-bg-overlay cursor-pointer">
+                            <IconSkill size={14} className="text-text-tertiary" />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[13px] text-text-primary block">{s.displayName}</span>
+                              <span className="text-[11px] text-text-tertiary truncate block">{s.description}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2">
-                <button className="w-10 h-10 rounded-full flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors">
+                <button className="w-10 h-10 rounded-full flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors" title="Voice input (coming soon)">
                   <IconMic size={18} />
                 </button>
                 <button

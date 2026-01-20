@@ -7,18 +7,18 @@ import { TaskView } from '@/components/task/task-view';
 import { RightPanelTabs } from '@/components/workspace/right-panel-tabs';
 import { IconSpinner } from '@/components/ui/icons';
 import { useStore } from '@/lib/store';
-import type { Workspace, Task } from '@/lib/types';
+import type { Project, Task } from '@/lib/types';
 
-export default function WorkspacePage() {
+export default function ProjectPage() {
   const params = useParams();
   const router = useRouter();
-  const workspaceId = params.workspaceId as string;
+  const projectId = params.workspaceId as string;
 
   const {
-    workspaces,
-    setWorkspaces,
-    currentWorkspace,
-    setCurrentWorkspace,
+    projects,
+    setProjects,
+    currentProject,
+    setCurrentProject,
     tasks,
     setTasks,
     currentTask,
@@ -30,14 +30,14 @@ export default function WorkspacePage() {
   const [defaultTab, setDefaultTab] = useState<'files' | 'artifacts' | 'browser'>('browser');
 
   useEffect(() => {
-    const storedWorkspaces = localStorage.getItem('swarmkit-workspaces');
-    if (storedWorkspaces) {
-      const parsed: Workspace[] = JSON.parse(storedWorkspaces);
-      setWorkspaces(parsed);
+    const storedProjects = localStorage.getItem('swarmkit-projects');
+    if (storedProjects) {
+      const parsed: Project[] = JSON.parse(storedProjects);
+      setProjects(parsed);
 
-      const workspace = parsed.find((w) => w.id === workspaceId);
-      if (workspace) {
-        setCurrentWorkspace(workspace);
+      const project = parsed.find((p) => p.id === projectId);
+      if (project) {
+        setCurrentProject(project);
       } else {
         router.push('/');
         return;
@@ -47,7 +47,7 @@ export default function WorkspacePage() {
       return;
     }
 
-    const storedTasks = localStorage.getItem(`swarmkit-tasks-${workspaceId}`);
+    const storedTasks = localStorage.getItem(`swarmkit-tasks-${projectId}`);
     if (storedTasks) {
       const parsed: Task[] = JSON.parse(storedTasks);
       setTasks(parsed);
@@ -57,7 +57,7 @@ export default function WorkspacePage() {
     }
 
     setLoading(false);
-  }, [workspaceId, router, setWorkspaces, setCurrentWorkspace, setTasks, setCurrentTask, currentTask]);
+  }, [projectId, router, setProjects, setCurrentProject, setTasks, setCurrentTask, currentTask]);
 
   const handleOpenPanel = (tab: 'files' | 'artifacts' | 'browser' = 'browser') => {
     setDefaultTab(tab);
@@ -69,13 +69,13 @@ export default function WorkspacePage() {
       <div className="flex h-screen items-center justify-center bg-bg-base">
         <div className="flex flex-col items-center gap-3">
           <IconSpinner size={24} className="text-accent" />
-          <span className="text-[13px] text-text-tertiary">Loading workspace...</span>
+          <span className="text-[13px] text-text-tertiary">Loading project...</span>
         </div>
       </div>
     );
   }
 
-  if (!currentWorkspace) {
+  if (!currentProject) {
     return null;
   }
 
@@ -88,7 +88,7 @@ export default function WorkspacePage() {
         <div className={rightPanelOpen ? "w-1/2 flex flex-col overflow-hidden" : "flex-1 flex flex-col overflow-hidden"}>
           <TaskView
             task={currentTask}
-            workspace={currentWorkspace}
+            project={currentProject}
             onOpenPanel={handleOpenPanel}
             rightPanelOpen={rightPanelOpen}
           />
@@ -98,7 +98,7 @@ export default function WorkspacePage() {
         {rightPanelOpen && (
           <div className="w-1/2 flex flex-col overflow-hidden">
             <RightPanelTabs
-              workspace={currentWorkspace}
+              project={currentProject}
               task={currentTask}
               onClose={() => setRightPanelOpen(false)}
               defaultTab={defaultTab}

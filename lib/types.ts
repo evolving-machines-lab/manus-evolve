@@ -1,16 +1,16 @@
-// Workspace types
-export interface Workspace {
+// Project types
+export interface Project {
   id: string;
   name: string;
   description?: string;
-  files: WorkspaceFile[];
+  files: ProjectFile[];
   integrations: string[];
   skills: string[];
   createdAt: string;
   updatedAt: string;
 }
 
-export interface WorkspaceFile {
+export interface ProjectFile {
   id: string;
   name: string;
   path: string;
@@ -22,7 +22,7 @@ export interface WorkspaceFile {
 // Task types
 export interface Task {
   id: string;
-  workspaceId: string;
+  projectId: string;
   title: string;
   status: 'pending' | 'running' | 'paused' | 'completed' | 'failed';
   prompt: string;
@@ -83,19 +83,19 @@ export interface Skill {
   name: string;
   displayName: string;
   description: string;
-  category: 'documents' | 'browser' | 'research' | 'design' | 'business' | 'development';
+  category: 'documents' | 'browser' | 'research' | 'design' | 'business' | 'development' | 'media';
 }
 
 // Store types
 export interface AppState {
-  // Workspaces
-  workspaces: Workspace[];
-  currentWorkspace: Workspace | null;
-  setWorkspaces: (workspaces: Workspace[]) => void;
-  setCurrentWorkspace: (workspace: Workspace | null) => void;
-  addWorkspace: (workspace: Workspace) => void;
-  updateWorkspace: (id: string, updates: Partial<Workspace>) => void;
-  deleteWorkspace: (id: string) => void;
+  // Projects
+  projects: Project[];
+  currentProject: Project | null;
+  setProjects: (projects: Project[]) => void;
+  setCurrentProject: (project: Project | null) => void;
+  addProject: (project: Project) => void;
+  updateProject: (id: string, updates: Partial<Project>) => void;
+  deleteProject: (id: string) => void;
 
   // Tasks
   tasks: Task[];

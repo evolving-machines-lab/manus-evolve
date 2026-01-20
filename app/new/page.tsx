@@ -19,7 +19,7 @@ import { useStore } from '@/lib/store';
 import { AVAILABLE_SKILLS, SKILL_CATEGORIES } from '@/lib/skills';
 import { AVAILABLE_INTEGRATIONS } from '@/lib/integrations';
 import { cn, generateId, formatBytes } from '@/lib/utils';
-import type { WorkspaceFile, Integration } from '@/lib/types';
+import type { ProjectFile, Integration } from '@/lib/types';
 
 type Step = 'files' | 'integrations' | 'skills';
 
@@ -29,13 +29,13 @@ const STEPS: { id: Step; label: string; icon: typeof IconFolder }[] = [
   { id: 'skills', label: 'Skills', icon: IconSkill },
 ];
 
-export default function NewWorkspacePage() {
+export default function NewProjectPage() {
   const router = useRouter();
-  const { addWorkspace, integrations, setIntegrations } = useStore();
+  const { addProject, integrations, setIntegrations } = useStore();
 
   const [step, setStep] = useState<Step>('files');
-  const [workspaceName, setWorkspaceName] = useState('');
-  const [files, setFiles] = useState<WorkspaceFile[]>([]);
+  const [projectName, setProjectName] = useState('');
+  const [files, setFiles] = useState<ProjectFile[]>([]);
   const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [integrationSearch, setIntegrationSearch] = useState('');
@@ -60,7 +60,7 @@ export default function NewWorkspacePage() {
   }, [setIntegrations]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    const newFiles: WorkspaceFile[] = acceptedFiles.map((file) => ({
+    const newFiles: ProjectFile[] = acceptedFiles.map((file) => ({
       id: generateId(),
       name: file.name,
       path: file.name,
@@ -92,8 +92,8 @@ export default function NewWorkspacePage() {
   };
 
   const handleCreate = () => {
-    const name = workspaceName.trim() || `Workspace ${Date.now()}`;
-    const workspace = {
+    const name = projectName.trim() || `Project ${Date.now()}`;
+    const project = {
       id: generateId(),
       name,
       files,
@@ -103,14 +103,14 @@ export default function NewWorkspacePage() {
       updatedAt: new Date().toISOString(),
     };
 
-    addWorkspace(workspace);
+    addProject(project);
 
-    const stored = localStorage.getItem('swarmkit-workspaces');
-    const workspaces = stored ? JSON.parse(stored) : [];
-    workspaces.push(workspace);
-    localStorage.setItem('swarmkit-workspaces', JSON.stringify(workspaces));
+    const stored = localStorage.getItem('swarmkit-projects');
+    const projects = stored ? JSON.parse(stored) : [];
+    projects.push(project);
+    localStorage.setItem('swarmkit-projects', JSON.stringify(projects));
 
-    router.push(`/${workspace.id}`);
+    router.push(`/${project.id}`);
   };
 
   const canProceed = () => {
@@ -138,7 +138,7 @@ export default function NewWorkspacePage() {
         {/* Header */}
         <header className="h-14 px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1 className="text-[15px] font-semibold text-text-primary">New Workspace</h1>
+            <h1 className="text-[15px] font-semibold text-text-primary">New Project</h1>
           </div>
 
           {/* Step indicators */}
@@ -165,7 +165,7 @@ export default function NewWorkspacePage() {
                     <span>{s.label}</span>
                   </button>
                   {i < STEPS.length - 1 && (
-                    <IconChevronRight size={16} className="text-text-quaternary mx-1 shrink-0" />
+                    <IconChevronRight size={16} className="text-text-quaternary mx-1 shrink-0 mt-[2px]" />
                   )}
                 </div>
               );
@@ -176,15 +176,15 @@ export default function NewWorkspacePage() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-2xl mx-auto py-8 px-6">
-            {/* Workspace name input */}
+            {/* Project name input */}
             <div className="mb-10">
               <label className="block text-[13px] font-medium text-text-secondary mb-2">
-                Workspace name
+                Project name
               </label>
               <input
                 type="text"
-                value={workspaceName}
-                onChange={(e) => setWorkspaceName(e.target.value)}
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
                 placeholder="My Project"
                 className="w-full px-4 py-3 bg-bg-surface border border-border-subtle rounded-lg
                   text-text-primary placeholder:text-text-quaternary
@@ -490,7 +490,7 @@ export default function NewWorkspacePage() {
                   : 'bg-bg-surface text-text-quaternary cursor-not-allowed'
               )}
             >
-              {step === 'skills' ? 'Create Workspace' : 'Continue'}
+              {step === 'skills' ? 'Create Project' : 'Continue'}
             </button>
           </div>
         </footer>

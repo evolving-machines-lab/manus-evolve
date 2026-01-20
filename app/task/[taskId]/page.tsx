@@ -17,7 +17,7 @@ export default function StandaloneTaskPage() {
   const {
     currentTask,
     setCurrentTask,
-    setCurrentWorkspace,
+    setCurrentProject,
   } = useStore();
 
   const [loading, setLoading] = useState(true);
@@ -32,14 +32,14 @@ export default function StandaloneTaskPage() {
       const task = tasks.find(t => t.id === taskId);
       if (task) {
         setCurrentTask(task);
-        setCurrentWorkspace(null); // No workspace for standalone tasks
+        setCurrentProject(null); // No project for standalone tasks
         setLoading(false);
         return;
       }
     }
     // Task not found, redirect home
     router.push('/');
-  }, [taskId, router, setCurrentTask, setCurrentWorkspace]);
+  }, [taskId, router, setCurrentTask, setCurrentProject]);
 
   const handleOpenPanel = (tab: 'files' | 'artifacts' | 'browser' = 'browser') => {
     setDefaultTab(tab);
@@ -70,7 +70,7 @@ export default function StandaloneTaskPage() {
         <div className={rightPanelOpen ? "w-1/2 flex flex-col overflow-hidden" : "flex-1 flex flex-col overflow-hidden"}>
           <TaskView
             task={currentTask}
-            workspace={null}
+            project={null}
             onOpenPanel={handleOpenPanel}
             rightPanelOpen={rightPanelOpen}
           />
@@ -80,7 +80,7 @@ export default function StandaloneTaskPage() {
         {rightPanelOpen && (
           <div className="w-1/2 flex flex-col overflow-hidden">
             <RightPanelTabs
-              workspace={null}
+              project={null}
               task={currentTask}
               onClose={() => setRightPanelOpen(false)}
               defaultTab={defaultTab}

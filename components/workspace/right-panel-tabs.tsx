@@ -11,10 +11,10 @@ import { cn } from '@/lib/utils';
 import { FilesTab } from './files-tab';
 import { ArtifactsTab } from './artifacts-tab';
 import { BrowserTab } from './browser-tab';
-import type { Task, Workspace } from '@/lib/types';
+import type { Task, Project } from '@/lib/types';
 
 interface RightPanelTabsProps {
-  workspace: Workspace | null;
+  project: Project | null;
   task: Task | null;
   onClose: () => void;
   defaultTab?: 'files' | 'artifacts' | 'browser';
@@ -31,7 +31,7 @@ function IconOutput({ size = 20, className }: { size?: number; className?: strin
   );
 }
 
-export function RightPanelTabs({ workspace, task, onClose, defaultTab = 'browser' }: RightPanelTabsProps) {
+export function RightPanelTabs({ project, task, onClose, defaultTab = 'browser' }: RightPanelTabsProps) {
   const { rightPanelView, setRightPanelView } = useStore();
   const [activeTab, setActiveTab] = useState<'files' | 'artifacts' | 'browser'>(defaultTab);
 
@@ -55,7 +55,7 @@ export function RightPanelTabs({ workspace, task, onClose, defaultTab = 'browser
           {/* Title row */}
           <div className="h-12 px-4 flex items-center justify-between">
             <span className="text-[15px] font-medium text-text-primary">
-              {workspace?.name || task?.title || 'Task'}
+              {project?.name || task?.title || 'Task'}
             </span>
             <button
               onClick={onClose}
@@ -91,8 +91,13 @@ export function RightPanelTabs({ workspace, task, onClose, defaultTab = 'browser
 
         {/* Tab content */}
         <div className="flex-1 overflow-hidden">
-          {activeTab === 'files' && (
-            <FilesTab workspace={workspace} />
+          {activeTab === 'files' && project && (
+            <FilesTab project={project} />
+          )}
+          {activeTab === 'files' && !project && (
+            <div className="h-full flex items-center justify-center">
+              <IconFolder size={32} className="text-text-quaternary" />
+            </div>
           )}
           {activeTab === 'artifacts' && (
             <ArtifactsTab task={task} />

@@ -91,7 +91,7 @@ export default function SettingsPage() {
               </h2>
               <p className="text-[13px] text-text-secondary max-w-2xl">
                 Pre-authenticated integrations are available to agents without requiring in-chat authentication.
-                Connect your services once, use them across all workspaces.
+                Connect your services once, use them across all projects.
               </p>
             </div>
 

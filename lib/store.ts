@@ -1,28 +1,28 @@
 import { create } from 'zustand';
-import type { AppState, Workspace, Task, Integration } from './types';
+import type { AppState, Project, Task, Integration } from './types';
 
 export const useStore = create<AppState>((set) => ({
-  // Workspaces
-  workspaces: [],
-  currentWorkspace: null,
-  setWorkspaces: (workspaces: Workspace[]) => set({ workspaces }),
-  setCurrentWorkspace: (workspace: Workspace | null) => set({ currentWorkspace: workspace }),
-  addWorkspace: (workspace: Workspace) =>
-    set((state) => ({ workspaces: [...state.workspaces, workspace] })),
-  updateWorkspace: (id: string, updates: Partial<Workspace>) =>
+  // Projects
+  projects: [],
+  currentProject: null,
+  setProjects: (projects: Project[]) => set({ projects }),
+  setCurrentProject: (project: Project | null) => set({ currentProject: project }),
+  addProject: (project: Project) =>
+    set((state) => ({ projects: [...state.projects, project] })),
+  updateProject: (id: string, updates: Partial<Project>) =>
     set((state) => ({
-      workspaces: state.workspaces.map((w) =>
-        w.id === id ? { ...w, ...updates, updatedAt: new Date().toISOString() } : w
+      projects: state.projects.map((p) =>
+        p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p
       ),
-      currentWorkspace:
-        state.currentWorkspace?.id === id
-          ? { ...state.currentWorkspace, ...updates, updatedAt: new Date().toISOString() }
-          : state.currentWorkspace,
+      currentProject:
+        state.currentProject?.id === id
+          ? { ...state.currentProject, ...updates, updatedAt: new Date().toISOString() }
+          : state.currentProject,
     })),
-  deleteWorkspace: (id: string) =>
+  deleteProject: (id: string) =>
     set((state) => ({
-      workspaces: state.workspaces.filter((w) => w.id !== id),
-      currentWorkspace: state.currentWorkspace?.id === id ? null : state.currentWorkspace,
+      projects: state.projects.filter((p) => p.id !== id),
+      currentProject: state.currentProject?.id === id ? null : state.currentProject,
     })),
 
   // Tasks

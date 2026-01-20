@@ -9,16 +9,16 @@ interface TaskListProps {
   tasks: Task[];
   currentTask: Task | null;
   onSelectTask: (task: Task) => void;
-  workspaceId: string;
+  projectId: string;
 }
 
-export function TaskList({ tasks, currentTask, onSelectTask, workspaceId }: TaskListProps) {
+export function TaskList({ tasks, currentTask, onSelectTask, projectId }: TaskListProps) {
   const { addTask, setCurrentTask } = useStore();
 
   const createNewTask = () => {
     const task: Task = {
       id: generateId(),
-      workspaceId,
+      projectId,
       title: 'New Task',
       status: 'pending',
       prompt: '',
@@ -32,10 +32,10 @@ export function TaskList({ tasks, currentTask, onSelectTask, workspaceId }: Task
     addTask(task);
     setCurrentTask(task);
 
-    const stored = localStorage.getItem(`swarmkit-tasks-${workspaceId}`);
+    const stored = localStorage.getItem(`swarmkit-tasks-${projectId}`);
     const existingTasks = stored ? JSON.parse(stored) : [];
     existingTasks.push(task);
-    localStorage.setItem(`swarmkit-tasks-${workspaceId}`, JSON.stringify(existingTasks));
+    localStorage.setItem(`swarmkit-tasks-${projectId}`, JSON.stringify(existingTasks));
   };
 
   const getStatusLabel = (status: Task['status']) => {

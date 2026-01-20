@@ -1,7 +1,7 @@
 // SwarmKit SDK wrapper for the application
 // This file handles all SwarmKit SDK interactions
 
-import type { Workspace, Task, Message, ProgressItem, Artifact, SwarmKitEvent } from './types';
+import type { Project, Task, Message, ProgressItem, Artifact, SwarmKitEvent } from './types';
 
 // In production, this would use the actual SwarmKit SDK:
 // import { SwarmKit } from '@swarmkit/sdk';
@@ -11,7 +11,7 @@ import type { Workspace, Task, Message, ProgressItem, Artifact, SwarmKitEvent } 
 
 interface SwarmKitConfig {
   apiKey?: string;
-  workspaceFiles: Record<string, string | ArrayBuffer>;
+  projectFiles: Record<string, string | ArrayBuffer>;
   skills: string[];
   integrations: string[];
   userId: string;
@@ -76,9 +76,9 @@ export function createSwarmKit(config: SwarmKitConfig): SwarmKitInstance {
       }
 
       // Simulate message chunks
-      const responseText = `I've analyzed the files in your workspace. Here's what I found:
+      const responseText = `I've analyzed the files in your project. Here's what I found:
 
-1. **File Analysis**: I reviewed ${Object.keys(config.workspaceFiles).length || 0} files in your context folder.
+1. **File Analysis**: I reviewed ${Object.keys(config.projectFiles).length || 0} files in your context folder.
 
 2. **Skills Active**: ${config.skills.length > 0 ? config.skills.join(', ') : 'None specified'}
 
@@ -138,7 +138,7 @@ I'm ready to help you with your task. What would you like me to do?`;
   };
 }
 
-// Helper to convert workspace files to SwarmKit context format
+// Helper to convert project files to SwarmKit context format
 export function prepareContextFiles(
   files: { name: string; content?: string | ArrayBuffer }[]
 ): Record<string, string | ArrayBuffer> {
@@ -159,7 +159,7 @@ import { SwarmKit } from '@swarmkit/sdk';
 import type { OutputEvent } from '@swarmkit/sdk';
 
 export async function createRealSwarmKit(
-  workspace: Workspace,
+  project: Project,
   task: Task,
   userId: string,
   onEvent: (event: OutputEvent) => void
@@ -169,15 +169,15 @@ export async function createRealSwarmKit(
       type: 'claude',
       apiKey: process.env.SWARMKIT_API_KEY,
     })
-    .withSessionTagPrefix(`workspace-${workspace.id}`)
-    .withSkills(workspace.skills)
+    .withSessionTagPrefix(`project-${project.id}`)
+    .withSkills(project.skills)
     .withComposio(userId, {
-      toolkits: workspace.integrations,
+      toolkits: project.integrations,
     });
 
-  // Upload workspace files as context
+  // Upload project files as context
   const contextFiles: Record<string, string | ArrayBuffer> = {};
-  for (const file of workspace.files) {
+  for (const file of project.files) {
     if (file.content) {
       contextFiles[file.name] = file.content;
     }

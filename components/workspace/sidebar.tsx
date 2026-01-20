@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -22,25 +23,38 @@ import {
 } from '@/components/ui/icons';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
-import type { Task, Workspace } from '@/lib/types';
+import { SearchModal } from '@/components/search-modal';
+import type { Task, Project } from '@/lib/types';
 
-// Dropdown menu component
+// Dropdown menu component using portal for proper positioning
 function DropdownMenu({
   isOpen,
   onClose,
   items,
-  position = 'right'
+  anchorEl
 }: {
   isOpen: boolean;
   onClose: () => void;
   items: { label: string; icon: React.ReactNode; onClick: () => void; danger?: boolean }[];
-  position?: 'left' | 'right';
+  anchorEl: HTMLElement | null;
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (isOpen && anchorEl) {
+      const rect = anchorEl.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + 4,
+        left: rect.right - 140 // menu width is ~140px, align to right edge
+      });
+    }
+  }, [isOpen, anchorEl]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node) &&
+          anchorEl && !anchorEl.contains(e.target as Node)) {
         onClose();
       }
     };
@@ -48,17 +62,15 @@ function DropdownMenu({
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, anchorEl]);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
-  return (
+  return createPortal(
     <div
       ref={menuRef}
-      className={cn(
-        "absolute top-full mt-1 z-50 min-w-[140px] p-1.5 rounded-xl border border-border-subtle bg-bg-surface shadow-lg",
-        position === 'right' ? 'right-0' : 'left-0'
-      )}
+      style={{ top: position.top, left: position.left }}
+      className="fixed z-[100] min-w-[140px] p-1.5 rounded-xl border border-border-subtle bg-bg-surface shadow-lg"
     >
       {items.map((item, i) => (
         <button
@@ -77,7 +89,8 @@ function DropdownMenu({
           {item.label}
         </button>
       ))}
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -94,13 +107,13 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const {
-    workspaces,
-    setWorkspaces,
-    currentWorkspace,
+    projects,
+    setProjects,
+    currentProject,
     tasks,
     currentTask,
     setCurrentTask,
-    setCurrentWorkspace,
+    setCurrentProject,
     setTasks,
     expandedProjects,
     toggleProjectExpanded,
@@ -112,15 +125,32 @@ export function Sidebar() {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [projectsCollapsed, setProjectsCollapsed] = useState(false);
   const [tasksCollapsed, setTasksCollapsed] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const editInputRef = useRef<HTMLInputElement>(null);
+  const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
 
-  // Delete a workspace and its tasks
-  const deleteWorkspace = (workspaceId: string) => {
-    const updated = workspaces.filter(w => w.id !== workspaceId);
-    setWorkspaces(updated);
-    localStorage.setItem('swarmkit-workspaces', JSON.stringify(updated));
-    localStorage.removeItem(`swarmkit-tasks-${workspaceId}`);
-    if (currentWorkspace?.id === workspaceId) {
-      setCurrentWorkspace(null);
+  // Global keyboard shortcut for search (⌘K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Delete a project and its tasks
+  const deleteProject = (projectId: string) => {
+    const updated = projects.filter(w => w.id !== projectId);
+    setProjects(updated);
+    localStorage.setItem('swarmkit-projects', JSON.stringify(updated));
+    localStorage.removeItem(`swarmkit-tasks-${projectId}`);
+    if (currentProject?.id === projectId) {
+      setCurrentProject(null);
       setCurrentTask(null);
       router.push('/');
     }
@@ -128,33 +158,106 @@ export function Sidebar() {
 
   // Delete a task
   const deleteTask = (task: Task) => {
-    const storageKey = task.workspaceId === 'standalone'
+    const storageKey = task.projectId === 'standalone'
       ? 'swarmkit-tasks-standalone'
-      : `swarmkit-tasks-${task.workspaceId}`;
+      : `swarmkit-tasks-${task.projectId}`;
 
     const stored = localStorage.getItem(storageKey);
     if (stored) {
       const taskList = JSON.parse(stored) as Task[];
       const updated = taskList.filter(t => t.id !== task.id);
       localStorage.setItem(storageKey, JSON.stringify(updated));
-      if (task.workspaceId === currentWorkspace?.id) {
+      if (task.projectId === currentProject?.id) {
         setTasks(updated);
       }
       const wasCurrentTask = currentTask?.id === task.id;
       if (wasCurrentTask) {
         setCurrentTask(null);
         // Navigate away after deleting current task
-        if (task.workspaceId === 'standalone') {
+        if (task.projectId === 'standalone') {
           router.push('/');
         } else {
-          router.push(`/${task.workspaceId}`);
+          router.push(`/${task.projectId}`);
         }
       }
       setAllTasks(prev => prev.filter(t => t.id !== task.id));
     }
   };
 
-  // Load all tasks from all workspaces + standalone tasks
+  // Start editing a project name
+  const startEditProject = (project: Project) => {
+    setEditingId(`project-${project.id}`);
+    setEditValue(project.name);
+    setTimeout(() => editInputRef.current?.focus(), 0);
+  };
+
+  // Start editing a task title
+  const startEditTask = (task: Task) => {
+    setEditingId(`task-${task.id}`);
+    setEditValue(task.title || 'Untitled task');
+    setTimeout(() => editInputRef.current?.focus(), 0);
+  };
+
+  // Save project rename
+  const saveProjectRename = (projectId: string) => {
+    if (!editValue.trim()) {
+      setEditingId(null);
+      return;
+    }
+    const updated = projects.map(w =>
+      w.id === projectId ? { ...w, name: editValue.trim() } : w
+    );
+    setProjects(updated);
+    localStorage.setItem('swarmkit-projects', JSON.stringify(updated));
+    setEditingId(null);
+  };
+
+  // Save task rename
+  const saveTaskRename = (task: Task) => {
+    if (!editValue.trim()) {
+      setEditingId(null);
+      return;
+    }
+    const storageKey = task.projectId === 'standalone'
+      ? 'swarmkit-tasks-standalone'
+      : `swarmkit-tasks-${task.projectId}`;
+
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      const taskList = JSON.parse(stored) as Task[];
+      const updated = taskList.map(t =>
+        t.id === task.id ? { ...t, title: editValue.trim() } : t
+      );
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+
+      // Update allTasks state
+      setAllTasks(prev => prev.map(t =>
+        t.id === task.id ? { ...t, title: editValue.trim() } : t
+      ));
+
+      // Update current task if it's the one being renamed
+      if (currentTask?.id === task.id) {
+        setCurrentTask({ ...currentTask, title: editValue.trim() });
+      }
+    }
+    setEditingId(null);
+  };
+
+  // Handle edit input keydown
+  const handleEditKeyDown = (e: React.KeyboardEvent, type: 'project' | 'task', item: Project | Task) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (type === 'project') {
+        saveProjectRename((item as Project).id);
+      } else {
+        saveTaskRename(item as Task);
+      }
+    } else if (e.key === 'Escape') {
+      setEditingId(null);
+    }
+  };
+
+  // Load all tasks from all projects + standalone tasks
   useEffect(() => {
     const loadedTasks: Task[] = [];
 
@@ -165,8 +268,8 @@ export function Sidebar() {
       loadedTasks.push(...parsed);
     }
 
-    // Load tasks from each workspace
-    workspaces.forEach(ws => {
+    // Load tasks from each project
+    projects.forEach(ws => {
       const stored = localStorage.getItem(`swarmkit-tasks-${ws.id}`);
       if (stored) {
         const wsTasks = JSON.parse(stored) as Task[];
@@ -174,64 +277,64 @@ export function Sidebar() {
       }
     });
     setAllTasks(loadedTasks);
-  }, [workspaces, tasks]);
+  }, [projects, tasks]);
 
-  // Load tasks for current workspace
+  // Load tasks for current project
   useEffect(() => {
-    if (currentWorkspace) {
-      const stored = localStorage.getItem(`swarmkit-tasks-${currentWorkspace.id}`);
+    if (currentProject) {
+      const stored = localStorage.getItem(`swarmkit-tasks-${currentProject.id}`);
       if (stored) {
         setTasks(JSON.parse(stored));
       }
     }
-  }, [currentWorkspace, setTasks]);
+  }, [currentProject, setTasks]);
 
   // Get tasks for a specific project
-  const getProjectTasks = (workspaceId: string) => {
-    return allTasks.filter(t => t.workspaceId === workspaceId);
+  const getProjectTasks = (projectId: string) => {
+    return allTasks.filter(t => t.projectId === projectId);
   };
 
   // Open a specific task
   const openTask = (task: Task) => {
-    if (task.workspaceId === 'standalone') {
+    if (task.projectId === 'standalone') {
       // Standalone task - no project
-      setCurrentWorkspace(null);
+      setCurrentProject(null);
       setCurrentTask(task);
       router.push(`/task/${task.id}`);
     } else {
       // Task belongs to a project
-      const workspace = workspaces.find(w => w.id === task.workspaceId);
-      if (workspace) {
-        setCurrentWorkspace(workspace);
+      const project = projects.find(w => w.id === task.projectId);
+      if (project) {
+        setCurrentProject(project);
       }
       setCurrentTask(task);
-      router.push(`/${task.workspaceId}`);
+      router.push(`/${task.projectId}`);
     }
   };
 
   // Handle clicking on a project row
-  const handleProjectClick = (workspace: Workspace) => {
-    const isCurrentProject = currentWorkspace?.id === workspace.id;
+  const handleProjectClick = (project: Project) => {
+    const isCurrentProject = currentProject?.id === project.id;
 
     if (isCurrentProject && currentTask) {
       // Inside a task of this project - start new chat (clear task)
       setCurrentTask(null);
-      router.push(`/${workspace.id}`);
+      router.push(`/${project.id}`);
     } else if (isCurrentProject) {
       // Already in this project with no task - toggle expand/collapse
-      toggleProjectExpanded(workspace.id);
+      toggleProjectExpanded(project.id);
     } else {
       // Different project - navigate to it (new chat)
-      setCurrentWorkspace(workspace);
+      setCurrentProject(project);
       setCurrentTask(null);
-      setProjectExpanded(workspace.id, true);
-      router.push(`/${workspace.id}`);
+      setProjectExpanded(project.id, true);
+      router.push(`/${project.id}`);
     }
   };
 
   // Start new standalone task (no project)
   const newStandaloneTask = () => {
-    setCurrentWorkspace(null);
+    setCurrentProject(null);
     setCurrentTask(null);
     router.push('/');
   };
@@ -252,7 +355,7 @@ export function Sidebar() {
           <Link href="/" className="flex items-center gap-2">
             <IconLogo size={22} className="text-text-secondary" />
             <span className="font-medium text-[16px] text-text-primary">
-              Async
+              Manus Evolve
             </span>
           </Link>
         )}
@@ -281,6 +384,7 @@ export function Sidebar() {
           {!sidebarCollapsed && <span className="text-[15px]">New task</span>}
         </button>
         <button
+          onClick={() => setSearchOpen(true)}
           className={cn(
             "flex items-center w-full rounded-xl text-text-primary hover:bg-[#2a2a2a] transition-all group",
             sidebarCollapsed ? "justify-center p-2.5" : "justify-between px-3 py-2.5"
@@ -317,11 +421,11 @@ export function Sidebar() {
           onClick={() => setProjectsCollapsed(!projectsCollapsed)}
           className="group flex items-center px-3 py-2.5 rounded-xl hover:bg-[#2a2a2a] transition-all cursor-pointer"
         >
-          <span className="text-[14px] font-medium text-text-tertiary leading-none">Projects</span>
+          <span className="text-[14px] font-medium text-text-tertiary">Projects</span>
           <IconChevronRight
             size={16}
             className={cn(
-              "text-text-tertiary transition-transform duration-150 ml-1 shrink-0",
+              "text-text-tertiary transition-transform duration-150 ml-0.5 shrink-0 mt-[2px]",
               !projectsCollapsed && "rotate-90"
             )}
           />
@@ -329,7 +433,7 @@ export function Sidebar() {
           <Link
             href="/new"
             onClick={(e) => e.stopPropagation()}
-            className="p-1.5 -mr-1 rounded-lg text-text-tertiary hover:text-text-secondary hover:bg-[#3a3a3a] transition-all opacity-0 group-hover:opacity-100"
+            className="p-1.5 -mr-1 rounded-lg text-text-tertiary hover:text-text-secondary hover:bg-[#3a3a3a] transition-all"
           >
             <IconPlus size={16} />
           </Link>
@@ -341,7 +445,7 @@ export function Sidebar() {
           projectsCollapsed ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100"
         )}>
           <nav className="space-y-0.5 mt-1 overflow-hidden">
-            {workspaces.length === 0 ? (
+            {projects.length === 0 ? (
               <Link
                 href="/new"
                 className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-text-secondary hover:bg-[#2a2a2a] hover:text-text-primary transition-all"
@@ -350,16 +454,16 @@ export function Sidebar() {
                 <span className="text-[15px]">New project</span>
               </Link>
             ) : (
-              workspaces.map((workspace) => {
-                const isExpanded = expandedProjects.has(workspace.id);
-                const projectTasks = getProjectTasks(workspace.id);
-                const isCurrentProject = currentWorkspace?.id === workspace.id;
+              projects.map((project) => {
+                const isExpanded = expandedProjects.has(project.id);
+                const projectTasks = getProjectTasks(project.id);
+                const isCurrentProject = currentProject?.id === project.id;
 
                 return (
-                  <div key={workspace.id}>
+                  <div key={project.id}>
                     {/* Project row */}
                     <div
-                      onClick={() => handleProjectClick(workspace)}
+                      onClick={() => handleProjectClick(project)}
                       className={cn(
                         "relative group flex items-center w-full px-3 py-2.5 rounded-xl transition-all cursor-pointer",
                         isCurrentProject && !currentTask ? "bg-[#2a2a2a]" : "hover:bg-[#2a2a2a]"
@@ -369,15 +473,15 @@ export function Sidebar() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleProjectExpanded(workspace.id);
+                          toggleProjectExpanded(project.id);
                         }}
                         className="p-1 -ml-1 mr-1 rounded hover:bg-[#3a3a3a] transition-colors"
                       >
                         {/* Folder icon - visible by default, hidden on hover */}
-                        <IconFolder size={18} className="text-text-tertiary block group-hover:hidden shrink-0" />
+                        <IconFolder size={16} className="text-text-tertiary block group-hover:hidden shrink-0" />
                         {/* Chevron - hidden by default, visible on hover */}
                         <IconChevronRight
-                          size={18}
+                          size={16}
                           className={cn(
                             "text-text-tertiary transition-transform duration-150 hidden group-hover:block shrink-0",
                             isExpanded && "rotate-90"
@@ -386,37 +490,59 @@ export function Sidebar() {
                       </button>
 
                       {/* Project name */}
-                      <span className="text-[14px] text-text-primary truncate flex-1">
-                        {workspace.name}
-                      </span>
+                      {editingId === `project-${project.id}` ? (
+                        <input
+                          ref={editInputRef}
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={(e) => handleEditKeyDown(e, 'project', project)}
+                          onBlur={() => saveProjectRename(project.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex-1 text-[14px] text-text-primary bg-transparent border-b border-accent focus:outline-none"
+                        />
+                      ) : (
+                        <span className="text-[14px] text-text-primary truncate flex-1">
+                          {project.name}
+                        </span>
+                      )}
 
                       {/* 3-dot menu */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenMenu(openMenu === `project-${workspace.id}` ? null : `project-${workspace.id}`);
-                        }}
-                        className={cn(
-                          "p-1.5 rounded-lg text-text-primary hover:bg-[#3a3a3a] transition-all ml-1",
-                          openMenu === `project-${workspace.id}` ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                        )}
-                      >
-                        <IconMoreHorizontal size={14} />
-                      </button>
+                      {editingId !== `project-${project.id}` && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (openMenu === `project-${project.id}`) {
+                              setOpenMenu(null);
+                              setMenuAnchorEl(null);
+                            } else {
+                              setOpenMenu(`project-${project.id}`);
+                              setMenuAnchorEl(e.currentTarget);
+                            }
+                          }}
+                          className={cn(
+                            "p-1.5 rounded-lg text-text-primary hover:bg-[#3a3a3a] transition-all ml-1",
+                            openMenu === `project-${project.id}` ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                          )}
+                        >
+                          <IconMoreHorizontal size={14} />
+                        </button>
+                      )}
 
                       <DropdownMenu
-                        isOpen={openMenu === `project-${workspace.id}`}
-                        onClose={() => setOpenMenu(null)}
+                        isOpen={openMenu === `project-${project.id}`}
+                        onClose={() => { setOpenMenu(null); setMenuAnchorEl(null); }}
+                        anchorEl={menuAnchorEl}
                         items={[
                           {
                             label: 'Rename',
                             icon: <IconEdit size={16} />,
-                            onClick: () => {/* TODO */}
+                            onClick: () => startEditProject(project)
                           },
                           {
                             label: 'Delete',
                             icon: <IconTrash size={16} />,
-                            onClick: () => deleteWorkspace(workspace.id),
+                            onClick: () => deleteProject(project.id),
                             danger: true
                           }
                         ]}
@@ -444,31 +570,52 @@ export function Sidebar() {
                                 )}
                               >
                                 <TaskIcon />
-                                <span className="text-[13px] truncate flex-1">
-                                  {task.title || 'Untitled task'}
-                                </span>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenMenu(openMenu === `task-${task.id}` ? null : `task-${task.id}`);
-                                  }}
-                                  className={cn(
-                                    "p-1.5 rounded-lg text-text-primary transition-all",
-                                    isActive ? "hover:bg-[#4a4a4a]" : "hover:bg-[#3a3a3a]",
-                                    openMenu === `task-${task.id}` ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                                  )}
-                                >
-                                  <IconMoreHorizontal size={14} />
-                                </button>
+                                {editingId === `task-${task.id}` ? (
+                                  <input
+                                    ref={editInputRef}
+                                    type="text"
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    onKeyDown={(e) => handleEditKeyDown(e, 'task', task)}
+                                    onBlur={() => saveTaskRename(task)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="flex-1 text-[13px] text-text-primary bg-transparent border-b border-accent focus:outline-none"
+                                  />
+                                ) : (
+                                  <span className="text-[13px] truncate flex-1">
+                                    {task.title || 'Untitled task'}
+                                  </span>
+                                )}
+                                {editingId !== `task-${task.id}` && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (openMenu === `task-${task.id}`) {
+                                        setOpenMenu(null);
+                                        setMenuAnchorEl(null);
+                                      } else {
+                                        setOpenMenu(`task-${task.id}`);
+                                        setMenuAnchorEl(e.currentTarget);
+                                      }
+                                    }}
+                                    className={cn(
+                                      "p-1.5 rounded-lg text-text-primary transition-all",
+                                      isActive ? "hover:bg-[#4a4a4a]" : "hover:bg-[#3a3a3a]",
+                                      openMenu === `task-${task.id}` ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                                    )}
+                                  >
+                                    <IconMoreHorizontal size={14} />
+                                  </button>
+                                )}
                                 <DropdownMenu
                                   isOpen={openMenu === `task-${task.id}`}
-                                  onClose={() => setOpenMenu(null)}
-                                  position="right"
+                                  onClose={() => { setOpenMenu(null); setMenuAnchorEl(null); }}
+                                  anchorEl={menuAnchorEl}
                                   items={[
                                     {
                                       label: 'Rename',
                                       icon: <IconEdit size={16} />,
-                                      onClick: () => {/* TODO */}
+                                      onClick: () => startEditTask(task)
                                     },
                                     {
                                       label: 'Delete',
@@ -501,11 +648,11 @@ export function Sidebar() {
           onClick={() => setTasksCollapsed(!tasksCollapsed)}
           className="group flex items-center px-3 py-2.5 rounded-xl hover:bg-[#2a2a2a] transition-all cursor-pointer"
         >
-          <span className="text-[14px] font-medium text-text-tertiary leading-none">All tasks</span>
+          <span className="text-[14px] font-medium text-text-tertiary">All tasks</span>
           <IconChevronRight
             size={16}
             className={cn(
-              "text-text-tertiary transition-transform duration-150 ml-1 shrink-0",
+              "text-text-tertiary transition-transform duration-150 ml-0.5 shrink-0 mt-[2px]",
               !tasksCollapsed && "rotate-90"
             )}
           />
@@ -515,7 +662,7 @@ export function Sidebar() {
               e.stopPropagation();
               newStandaloneTask();
             }}
-            className="p-1.5 -mr-1 rounded-lg text-text-tertiary hover:text-text-secondary hover:bg-[#3a3a3a] transition-all opacity-0 group-hover:opacity-100"
+            className="p-1.5 -mr-1 rounded-lg text-text-tertiary hover:text-text-secondary hover:bg-[#3a3a3a] transition-all"
           >
             <IconPlus size={16} />
           </button>
@@ -542,30 +689,52 @@ export function Sidebar() {
                     )}
                   >
                     <TaskIcon />
-                    <span className="text-[14px] truncate flex-1">
-                      {task.title || 'Untitled task'}
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenMenu(openMenu === `alltask-${task.id}` ? null : `alltask-${task.id}`);
-                      }}
-                      className={cn(
-                        "p-1.5 rounded-lg text-text-primary transition-all",
-                        isActive ? "hover:bg-[#4a4a4a]" : "hover:bg-[#3a3a3a]",
-                        openMenu === `alltask-${task.id}` ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                      )}
-                    >
-                      <IconMoreHorizontal size={14} />
-                    </button>
+                    {editingId === `task-${task.id}` ? (
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => handleEditKeyDown(e, 'task', task)}
+                        onBlur={() => saveTaskRename(task)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex-1 text-[14px] text-text-primary bg-transparent border-b border-accent focus:outline-none"
+                      />
+                    ) : (
+                      <span className="text-[14px] truncate flex-1">
+                        {task.title || 'Untitled task'}
+                      </span>
+                    )}
+                    {editingId !== `task-${task.id}` && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (openMenu === `alltask-${task.id}`) {
+                            setOpenMenu(null);
+                            setMenuAnchorEl(null);
+                          } else {
+                            setOpenMenu(`alltask-${task.id}`);
+                            setMenuAnchorEl(e.currentTarget);
+                          }
+                        }}
+                        className={cn(
+                          "p-1.5 rounded-lg text-text-primary transition-all",
+                          isActive ? "hover:bg-[#4a4a4a]" : "hover:bg-[#3a3a3a]",
+                          openMenu === `alltask-${task.id}` ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                        )}
+                      >
+                        <IconMoreHorizontal size={14} />
+                      </button>
+                    )}
                     <DropdownMenu
                       isOpen={openMenu === `alltask-${task.id}`}
-                      onClose={() => setOpenMenu(null)}
+                      onClose={() => { setOpenMenu(null); setMenuAnchorEl(null); }}
+                      anchorEl={menuAnchorEl}
                       items={[
                         {
                           label: 'Rename',
                           icon: <IconEdit size={16} />,
-                          onClick: () => {/* TODO */}
+                          onClick: () => startEditTask(task)
                         },
                         {
                           label: 'Delete',
@@ -595,10 +764,10 @@ export function Sidebar() {
               <line x1="12" y1="2" x2="12" y2="15"/>
             </svg>
             <div className="flex-1">
-              <p className="text-[14px] text-text-primary">Share Async</p>
+              <p className="text-[14px] text-text-primary">Share Manus Evolve</p>
               <p className="text-[12px] text-text-tertiary">Invite a friend</p>
             </div>
-            <IconChevronRight size={18} className="text-text-quaternary" />
+            <IconChevronRight size={16} className="text-text-quaternary" />
           </button>
         )}
 
@@ -621,6 +790,9 @@ export function Sidebar() {
           </button>
         </div>
       </div>
+
+      {/* Search Modal */}
+      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
     </aside>
   );
 }

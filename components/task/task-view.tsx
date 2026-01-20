@@ -12,12 +12,13 @@ import {
   IconPlug,
   IconSkill,
   IconX,
-  IconCheck,
 } from '@/components/ui/icons';
+import { SelectionModal } from '@/components/selection-modal';
 import { useStore } from '@/lib/store';
 import { cn, generateId } from '@/lib/utils';
-import type { Task, Project, Message, ProgressItem } from '@/lib/types';
+import type { Task, Project, Message } from '@/lib/types';
 import ReactMarkdown from 'react-markdown';
+import { AVAILABLE_INTEGRATIONS } from '@/lib/integrations';
 import { AVAILABLE_SKILLS } from '@/lib/skills';
 
 interface TaskViewProps {
@@ -30,15 +31,27 @@ interface TaskViewProps {
 export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskViewProps) {
   const [input, setInput] = useState('');
   const [previewCollapsed, setPreviewCollapsed] = useState(false);
-  const [showIntegrations, setShowIntegrations] = useState(false);
-  const [showSkills, setShowSkills] = useState(false);
+  const [showSelectionModal, setShowSelectionModal] = useState(false);
+  const [modalTab, setModalTab] = useState<'integrations' | 'skills'>('integrations');
+
+  // Initialize with project defaults
+  const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>(
+    project?.integrations || []
+  );
+  const [selectedSkills, setSelectedSkills] = useState<string[]>(
+    project?.skills || []
+  );
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const integrationsRef = useRef<HTMLDivElement>(null);
-  const skillsRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { updateTask, integrations } = useStore();
-  const connectedIntegrations = integrations.filter(i => i.connected);
+  const { updateTask } = useStore();
+
+  // Update selections when project changes
+  useEffect(() => {
+    setSelectedIntegrations(project?.integrations || []);
+    setSelectedSkills(project?.skills || []);
+  }, [project]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -50,20 +63,6 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
     }
   }, [input]);
-
-  // Close popups on click outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (integrationsRef.current && !integrationsRef.current.contains(e.target as Node)) {
-        setShowIntegrations(false);
-      }
-      if (skillsRef.current && !skillsRef.current.contains(e.target as Node)) {
-        setShowSkills(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const handleSubmit = async () => {
     if (!input.trim() || !task) return;
@@ -89,7 +88,6 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
 
     updateTask(task.id, updatedTask);
 
-    // Save to localStorage (handle standalone vs project tasks)
     const storageKey = project ? `swarmkit-tasks-${project.id}` : 'swarmkit-tasks-standalone';
     const stored = localStorage.getItem(storageKey);
     const tasks = stored ? JSON.parse(stored) : [];
@@ -100,10 +98,6 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
     }
 
     setInput('');
-
-    // TODO: Call SwarmKit SDK here
-    // The task is now in 'running' state with progress showing
-    // Real implementation will stream responses and update progress
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -116,8 +110,6 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
   const completedSteps = task?.progress.filter((p) => p.status === 'completed').length || 0;
   const totalSteps = task?.progress.length || 0;
   const isRunning = task?.status === 'running';
-  const filesCount = project?.files.length || 0;
-  const artifactsCount = task?.artifacts.length || 0;
 
   const handleCreateTask = () => {
     if (!input.trim()) return;
@@ -141,16 +133,16 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
         { id: generateId(), content: 'Processing', status: 'pending' },
       ],
       artifacts: [],
+      integrations: selectedIntegrations,
+      skills: selectedSkills,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    // Add task to store
     const { addTask, setCurrentTask } = useStore.getState();
     addTask(newTask);
     setCurrentTask(newTask);
 
-    // Save to localStorage
     const storageKey = project ? `swarmkit-tasks-${project.id}` : 'swarmkit-tasks-standalone';
     const stored = localStorage.getItem(storageKey);
     const tasks = stored ? JSON.parse(stored) : [];
@@ -158,10 +150,6 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
     localStorage.setItem(storageKey, JSON.stringify(tasks));
 
     setInput('');
-
-    // TODO: Call SwarmKit SDK here
-    // The task is now in 'running' state with progress showing
-    // Real implementation will stream responses and update progress
   };
 
   const handleEmptyKeyDown = (e: React.KeyboardEvent) => {
@@ -171,124 +159,195 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
     }
   };
 
+  const openIntegrationsModal = () => {
+    setModalTab('integrations');
+    setShowSelectionModal(true);
+  };
+
+  const openSkillsModal = () => {
+    setModalTab('skills');
+    setShowSelectionModal(true);
+  };
+
+  const removeIntegration = (id: string) => {
+    setSelectedIntegrations(prev => prev.filter(i => i !== id));
+  };
+
+  const removeSkill = (id: string) => {
+    setSelectedSkills(prev => prev.filter(s => s !== id));
+  };
+
+  const getIntegrationName = (id: string) => {
+    return AVAILABLE_INTEGRATIONS.find(i => i.id === id)?.displayName || id;
+  };
+
+  const getSkillName = (id: string) => {
+    return AVAILABLE_SKILLS.find(s => s.id === id)?.displayName || id;
+  };
+
+  // Render the input section with chips (shared between empty and task views)
+  const renderInputSection = (onSubmit: () => void, onKeyDown: (e: React.KeyboardEvent) => void, disabled = false) => (
+    <>
+      <div className={cn(
+        'rounded-3xl border bg-bg-surface p-4 transition-all duration-150',
+        'border-border-subtle',
+        'focus-within:border-border-default'
+      )}>
+        <textarea
+          ref={textareaRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder="Send message to Manus"
+          rows={1}
+          className="w-full bg-transparent resize-none text-[15px] text-text-primary placeholder:text-text-tertiary focus:outline-none min-h-[28px] max-h-[200px] overflow-y-auto mb-3"
+          disabled={disabled}
+        />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onOpenPanel?.('files')}
+              className="w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors"
+            >
+              <IconAttach size={18} />
+            </button>
+            <button
+              onClick={openIntegrationsModal}
+              className={cn(
+                "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center transition-colors",
+                selectedIntegrations.length > 0 ? "text-accent" : "text-text-tertiary hover:text-text-secondary"
+              )}
+              title="Select integrations"
+            >
+              <IconPlug size={18} />
+            </button>
+            <button
+              onClick={openSkillsModal}
+              className={cn(
+                "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center transition-colors",
+                selectedSkills.length > 0 ? "text-accent" : "text-text-tertiary hover:text-text-secondary"
+              )}
+              title="Select skills"
+            >
+              <IconSkill size={18} />
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              className="w-10 h-10 rounded-full flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors"
+              title="Voice input (coming soon)"
+            >
+              <IconMic size={18} />
+            </button>
+            <button
+              onClick={onSubmit}
+              disabled={!input.trim() || disabled}
+              className={cn(
+                'w-10 h-10 rounded-full flex items-center justify-center transition-all duration-150',
+                input.trim() && !disabled
+                  ? 'bg-text-secondary text-bg-base hover:bg-text-primary'
+                  : 'bg-bg-overlay text-text-quaternary cursor-not-allowed'
+              )}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 19V5M5 12l7-7 7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Integrations and Skills side by side */}
+      <div className="mt-12 flex gap-8">
+        {/* Selected Integrations section */}
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-3">
+            <IconPlug size={18} className="text-text-primary" />
+            <span className="text-[15px] font-medium text-text-primary">Integrations</span>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {selectedIntegrations.map(id => (
+              <div
+                key={id}
+                className="flex items-center gap-2 pl-3 pr-2 py-2 rounded-xl bg-accent-muted text-[13px] text-text-primary"
+              >
+                <span>{getIntegrationName(id)}</span>
+                <button
+                  onClick={() => removeIntegration(id)}
+                  className="p-1 rounded-full hover:bg-accent-muted text-text-tertiary hover:text-text-primary transition-colors"
+                >
+                  <IconX size={14} />
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={openIntegrationsModal}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-border-subtle text-[13px] text-text-tertiary hover:text-text-secondary hover:border-border-default transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              <span>Add</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Selected Skills section */}
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-3">
+            <IconSkill size={18} className="text-text-primary" />
+            <span className="text-[15px] font-medium text-text-primary">Skills</span>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {selectedSkills.map(id => (
+              <div
+                key={id}
+                className="flex items-center gap-2 pl-3 pr-2 py-2 rounded-xl bg-accent-muted text-[13px] text-text-primary"
+              >
+                <span>{getSkillName(id)}</span>
+                <button
+                  onClick={() => removeSkill(id)}
+                  className="p-1 rounded-full hover:bg-accent-muted text-text-tertiary hover:text-text-primary transition-colors"
+                >
+                  <IconX size={14} />
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={openSkillsModal}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-border-subtle text-[13px] text-text-tertiary hover:text-text-secondary hover:border-border-default transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              <span>Add</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
   if (!task) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-bg-base px-6">
+      <div className="flex-1 flex flex-col items-center justify-start pt-[15vh] bg-bg-base px-6">
         <div className="w-full max-w-2xl">
           <h1 className="text-2xl font-medium text-text-primary text-center mb-8">
             What can I help you with?
           </h1>
 
-          <div className={cn(
-            'rounded-3xl border bg-bg-surface p-4 transition-all duration-150 mb-6',
-            'border-border-subtle',
-            'focus-within:border-border-default'
-          )}>
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleEmptyKeyDown}
-              placeholder="Send message to Manus"
-              rows={1}
-              className="w-full bg-transparent resize-none text-[15px] text-text-primary placeholder:text-text-tertiary focus:outline-none min-h-[28px] max-h-[200px] mb-3"
-            />
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onOpenPanel?.('files')}
-                  className="w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors"
-                >
-                  <IconAttach size={18} />
-                </button>
-                <div className="relative" ref={integrationsRef}>
-                  <button
-                    onClick={() => setShowIntegrations(!showIntegrations)}
-                    className={cn(
-                      "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center transition-colors",
-                      showIntegrations ? "text-text-primary bg-bg-subtle" : "text-text-tertiary hover:text-text-secondary"
-                    )}
-                  >
-                    <IconPlug size={18} />
-                  </button>
-                  {showIntegrations && (
-                    <div className="absolute bottom-12 left-0 w-64 p-3 rounded-xl border border-border-subtle bg-bg-surface shadow-lg z-50">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[13px] font-medium text-text-primary">Integrations</span>
-                        <button onClick={() => setShowIntegrations(false)} className="p-1 text-text-tertiary hover:text-text-secondary">
-                          <IconX size={14} />
-                        </button>
-                      </div>
-                      {connectedIntegrations.length === 0 ? (
-                        <p className="text-[12px] text-text-tertiary py-2">No integrations connected. Connect in Settings.</p>
-                      ) : (
-                        <div className="space-y-1 max-h-48 overflow-y-auto">
-                          {connectedIntegrations.map(i => (
-                            <div key={i.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-bg-overlay">
-                              <IconCheck size={14} className="text-green-500" />
-                              <span className="text-[13px] text-text-primary">{i.displayName}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className="relative" ref={skillsRef}>
-                  <button
-                    onClick={() => setShowSkills(!showSkills)}
-                    className={cn(
-                      "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center transition-colors",
-                      showSkills ? "text-text-primary bg-bg-subtle" : "text-text-tertiary hover:text-text-secondary"
-                    )}
-                  >
-                    <IconSkill size={18} />
-                  </button>
-                  {showSkills && (
-                    <div className="absolute bottom-12 left-0 w-72 p-3 rounded-xl border border-border-subtle bg-bg-surface shadow-lg z-50">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[13px] font-medium text-text-primary">Skills</span>
-                        <button onClick={() => setShowSkills(false)} className="p-1 text-text-tertiary hover:text-text-secondary">
-                          <IconX size={14} />
-                        </button>
-                      </div>
-                      <div className="space-y-1 max-h-48 overflow-y-auto">
-                        {AVAILABLE_SKILLS.slice(0, 8).map(s => (
-                          <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-bg-overlay cursor-pointer">
-                            <IconSkill size={14} className="text-text-tertiary" />
-                            <div className="flex-1 min-w-0">
-                              <span className="text-[13px] text-text-primary block">{s.displayName}</span>
-                              <span className="text-[11px] text-text-tertiary truncate block">{s.description}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button className="w-10 h-10 rounded-full flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors" title="Voice input (coming soon)">
-                  <IconMic size={18} />
-                </button>
-                <button
-                  onClick={handleCreateTask}
-                  disabled={!input.trim()}
-                  className={cn(
-                    'w-10 h-10 rounded-full flex items-center justify-center transition-all duration-150',
-                    input.trim()
-                      ? 'bg-text-secondary text-bg-base hover:bg-text-primary'
-                      : 'bg-bg-overlay text-text-quaternary cursor-not-allowed'
-                  )}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 19V5M5 12l7-7 7 7" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
+          {renderInputSection(handleCreateTask, handleEmptyKeyDown)}
         </div>
+
+        <SelectionModal
+          isOpen={showSelectionModal}
+          onClose={() => setShowSelectionModal(false)}
+          selectedIntegrations={selectedIntegrations}
+          selectedSkills={selectedSkills}
+          onIntegrationsChange={setSelectedIntegrations}
+          onSkillsChange={setSelectedSkills}
+          initialTab={modalTab}
+        />
       </div>
     );
   }
@@ -354,74 +413,71 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
           {!rightPanelOpen && (
             <>
               {previewCollapsed ? (
-                /* COLLAPSED: Single card with browser + last task item */
-                <div className="rounded-2xl border border-border-subtle bg-bg-surface p-3">
-                  <div className="flex items-center gap-4">
-                    {/* Browser thumbnail */}
-                    <div
-                      onClick={() => onOpenPanel?.('browser')}
-                      className="relative w-[140px] h-[90px] rounded-xl bg-bg-overlay border border-border-subtle overflow-hidden cursor-pointer group flex-shrink-0"
-                    >
-                      <div className="h-full flex flex-col items-center justify-center p-2">
-                        {isRunning ? (
-                          <>
-                            <div className="w-6 h-6 rounded-full border-2 border-accent border-t-transparent animate-spin mb-1" />
-                            <span className="text-[9px] text-text-tertiary">Working...</span>
-                          </>
-                        ) : (
-                          <>
-                            <IconTerminal size={20} className="text-text-quaternary mb-1" />
-                            <span className="text-[9px] text-text-tertiary">Ready</span>
-                          </>
-                        )}
-                      </div>
-                      <div className="absolute bottom-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded bg-black/50">
-                        <IconExpand size={12} className="text-white" />
-                      </div>
-                    </div>
-
-                    {/* Last task item + count + expand button */}
-                    <div className="flex-1 flex items-center gap-3">
-                      {task.progress.length > 0 ? (
+                <div className="relative pt-[60px]">
+                  {/* Mini terminal - overflows above the bar */}
+                  <div
+                    onClick={() => onOpenPanel?.('browser')}
+                    className="absolute left-[17px] bottom-[17px] w-[160px] h-[100px] rounded-xl bg-bg-overlay border border-border-subtle overflow-hidden cursor-pointer group z-10"
+                  >
+                    <div className="h-full flex flex-col items-center justify-center p-2">
+                      {isRunning ? (
                         <>
-                          {task.progress[task.progress.length - 1].status === 'completed' ? (
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-green-500 flex-shrink-0">
-                              <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          ) : task.progress[task.progress.length - 1].status === 'in_progress' ? (
-                            <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin flex-shrink-0" />
-                          ) : (
-                            <div className="w-5 h-5 rounded-full border border-text-quaternary flex-shrink-0" />
-                          )}
-                          <span className="text-[15px] text-text-primary flex-1">
-                            {task.progress[task.progress.length - 1].content}
-                          </span>
+                          <div className="w-8 h-8 rounded-full border-2 border-accent border-t-transparent animate-spin mb-2" />
+                          <span className="text-[9px] text-text-tertiary">Working...</span>
                         </>
                       ) : (
-                        <span className="text-[15px] text-text-tertiary flex-1">Ready</span>
+                        <>
+                          <IconTerminal size={24} className="text-text-quaternary mb-2" />
+                          <span className="text-[9px] text-text-tertiary">Ready</span>
+                        </>
                       )}
                     </div>
+                    <div className="absolute bottom-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded bg-black/50">
+                      <IconExpand size={14} className="text-white" />
+                    </div>
+                  </div>
 
-                    {/* Count + expand button */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {task.progress.length > 0 && (
-                        <span className="text-[14px] text-text-tertiary">{completedSteps} / {totalSteps}</span>
-                      )}
-                      <button
-                        onClick={() => setPreviewCollapsed(false)}
-                        className="p-1 text-text-tertiary hover:text-text-secondary transition-colors"
-                      >
-                        <IconChevronDown size={18} className="rotate-180" />
-                      </button>
+                  {/* Thin progress bar */}
+                  <div className="rounded-2xl border border-border-subtle bg-bg-surface px-4 py-3 pl-[191px]">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 flex items-center gap-3">
+                        {task.progress.length > 0 ? (
+                          <>
+                            {task.progress[task.progress.length - 1].status === 'completed' ? (
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-green-500 flex-shrink-0">
+                                <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            ) : task.progress[task.progress.length - 1].status === 'in_progress' ? (
+                              <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin flex-shrink-0" />
+                            ) : (
+                              <div className="w-5 h-5 rounded-full border border-text-quaternary flex-shrink-0" />
+                            )}
+                            <span className="text-[15px] text-text-primary flex-1">
+                              {task.progress[task.progress.length - 1].content}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-[15px] text-text-tertiary flex-1">Ready</span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {task.progress.length > 0 && (
+                          <span className="text-[14px] text-text-tertiary">{completedSteps} / {totalSteps}</span>
+                        )}
+                        <button
+                          onClick={() => setPreviewCollapsed(false)}
+                          className="p-1 text-text-tertiary hover:text-text-secondary transition-colors"
+                        >
+                          <IconChevronDown size={18} className="rotate-180" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               ) : (
-                /* EXPANDED: Single card with browser + task progress */
                 <div className="rounded-2xl border border-border-subtle bg-bg-surface p-4">
-                  {/* Top section: Browser + Title */}
                   <div className="flex items-start gap-4">
-                    {/* Browser thumbnail */}
                     <div
                       onClick={() => onOpenPanel?.('browser')}
                       className="relative w-[160px] h-[100px] rounded-xl bg-bg-overlay border border-border-subtle overflow-hidden cursor-pointer group flex-shrink-0"
@@ -444,7 +500,6 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                       </div>
                     </div>
 
-                    {/* Title + status */}
                     <div className="flex-1 pt-1">
                       <h3 className="text-[20px] font-medium text-text-primary mb-2">
                         Manus's computer
@@ -459,7 +514,6 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                       </div>
                     </div>
 
-                    {/* Monitor icon + dropdown */}
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => onOpenPanel?.('browser')}
@@ -476,7 +530,6 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                     </div>
                   </div>
 
-                  {/* Task progress section - nested card style like Manus */}
                   {task.progress.length > 0 && (
                     <div className="mt-4 rounded-2xl border border-border-subtle bg-bg-overlay p-5">
                       <div className="flex items-center justify-between mb-4">
@@ -514,118 +567,19 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
           )}
 
           {/* Input area */}
-          <div className={cn(
-            'rounded-3xl border bg-bg-surface p-4 transition-all duration-150',
-            'border-border-subtle',
-            'focus-within:border-border-default'
-          )}>
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Send message to Manus"
-              rows={1}
-              className="w-full bg-transparent resize-none text-[15px] text-text-primary placeholder:text-text-tertiary focus:outline-none min-h-[28px] max-h-[200px] mb-3"
-              disabled={isRunning}
-            />
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onOpenPanel?.('files')}
-                  className="w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors"
-                >
-                  <IconAttach size={18} />
-                </button>
-                <div className="relative">
-                  <button
-                    onClick={() => setShowIntegrations(!showIntegrations)}
-                    className={cn(
-                      "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center transition-colors",
-                      showIntegrations ? "text-text-primary bg-bg-subtle" : "text-text-tertiary hover:text-text-secondary"
-                    )}
-                  >
-                    <IconPlug size={18} />
-                  </button>
-                  {showIntegrations && (
-                    <div className="absolute bottom-12 left-0 w-64 p-3 rounded-xl border border-border-subtle bg-bg-surface shadow-lg z-50">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[13px] font-medium text-text-primary">Integrations</span>
-                        <button onClick={() => setShowIntegrations(false)} className="p-1 text-text-tertiary hover:text-text-secondary">
-                          <IconX size={14} />
-                        </button>
-                      </div>
-                      {connectedIntegrations.length === 0 ? (
-                        <p className="text-[12px] text-text-tertiary py-2">No integrations connected. Connect in Settings.</p>
-                      ) : (
-                        <div className="space-y-1 max-h-48 overflow-y-auto">
-                          {connectedIntegrations.map(i => (
-                            <div key={i.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-bg-overlay">
-                              <IconCheck size={14} className="text-green-500" />
-                              <span className="text-[13px] text-text-primary">{i.displayName}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className="relative">
-                  <button
-                    onClick={() => setShowSkills(!showSkills)}
-                    className={cn(
-                      "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center transition-colors",
-                      showSkills ? "text-text-primary bg-bg-subtle" : "text-text-tertiary hover:text-text-secondary"
-                    )}
-                  >
-                    <IconSkill size={18} />
-                  </button>
-                  {showSkills && (
-                    <div className="absolute bottom-12 left-0 w-72 p-3 rounded-xl border border-border-subtle bg-bg-surface shadow-lg z-50">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[13px] font-medium text-text-primary">Skills</span>
-                        <button onClick={() => setShowSkills(false)} className="p-1 text-text-tertiary hover:text-text-secondary">
-                          <IconX size={14} />
-                        </button>
-                      </div>
-                      <div className="space-y-1 max-h-48 overflow-y-auto">
-                        {AVAILABLE_SKILLS.slice(0, 8).map(s => (
-                          <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-bg-overlay cursor-pointer">
-                            <IconSkill size={14} className="text-text-tertiary" />
-                            <div className="flex-1 min-w-0">
-                              <span className="text-[13px] text-text-primary block">{s.displayName}</span>
-                              <span className="text-[11px] text-text-tertiary truncate block">{s.description}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button className="w-10 h-10 rounded-full flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors" title="Voice input (coming soon)">
-                  <IconMic size={18} />
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={!input.trim() || isRunning}
-                  className={cn(
-                    'w-10 h-10 rounded-full flex items-center justify-center transition-all duration-150',
-                    input.trim() && !isRunning
-                      ? 'bg-text-secondary text-bg-base hover:bg-text-primary'
-                      : 'bg-bg-overlay text-text-quaternary cursor-not-allowed'
-                  )}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 19V5M5 12l7-7 7 7" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
+          {renderInputSection(handleSubmit, handleKeyDown, isRunning)}
         </div>
       </div>
+
+      <SelectionModal
+        isOpen={showSelectionModal}
+        onClose={() => setShowSelectionModal(false)}
+        selectedIntegrations={selectedIntegrations}
+        selectedSkills={selectedSkills}
+        onIntegrationsChange={setSelectedIntegrations}
+        onSkillsChange={setSelectedSkills}
+        initialTab={modalTab}
+      />
     </div>
   );
 }

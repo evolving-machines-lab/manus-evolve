@@ -29,6 +29,8 @@ export interface Task {
   messages: Message[];
   progress: ProgressItem[];
   artifacts: Artifact[];
+  integrations?: string[];
+  skills?: string[];
   sessionId?: string;
   browserUrl?: string;
   createdAt: string;
@@ -83,7 +85,7 @@ export interface Skill {
   name: string;
   displayName: string;
   description: string;
-  category: 'documents' | 'browser' | 'research' | 'design' | 'business' | 'development' | 'media';
+  category: 'documents' | 'research' | 'design' | 'business' | 'development' | 'media';
 }
 
 // Store types

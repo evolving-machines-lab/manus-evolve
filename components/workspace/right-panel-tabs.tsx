@@ -49,7 +49,7 @@ export function RightPanelTabs({ workspace, task, onClose, defaultTab = 'browser
   return (
     <div className="flex-1 h-full flex flex-col bg-bg-base">
       {/* Panel container with rounded corners */}
-      <div className="flex-1 m-3 ml-0 rounded-2xl border border-border-subtle bg-bg-surface overflow-hidden flex flex-col">
+      <div className="flex-1 m-3 ml-0 rounded-2xl border border-[#3a3a3a] bg-bg-surface overflow-hidden flex flex-col">
         {/* Header with tabs */}
         <div className="border-b border-border-subtle">
           {/* Title row */}

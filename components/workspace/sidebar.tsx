@@ -158,26 +158,28 @@ export function Sidebar() {
 
   // Delete a task
   const deleteTask = (task: Task) => {
-    const storageKey = task.projectId === 'standalone'
+    // Handle both old (workspaceId) and new (projectId) task formats
+    const taskProjectId = task.projectId || (task as unknown as { workspaceId?: string }).workspaceId || 'standalone';
+    const storageKey = taskProjectId === 'standalone'
       ? 'swarmkit-tasks-standalone'
-      : `swarmkit-tasks-${task.projectId}`;
+      : `swarmkit-tasks-${taskProjectId}`;
 
     const stored = localStorage.getItem(storageKey);
     if (stored) {
       const taskList = JSON.parse(stored) as Task[];
       const updated = taskList.filter(t => t.id !== task.id);
       localStorage.setItem(storageKey, JSON.stringify(updated));
-      if (task.projectId === currentProject?.id) {
+      if (taskProjectId === currentProject?.id) {
         setTasks(updated);
       }
       const wasCurrentTask = currentTask?.id === task.id;
       if (wasCurrentTask) {
         setCurrentTask(null);
         // Navigate away after deleting current task
-        if (task.projectId === 'standalone') {
+        if (taskProjectId === 'standalone') {
           router.push('/');
         } else {
-          router.push(`/${task.projectId}`);
+          router.push(`/${taskProjectId}`);
         }
       }
       setAllTasks(prev => prev.filter(t => t.id !== task.id));

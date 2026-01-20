@@ -94,7 +94,7 @@ export default function HomePage() {
     <div className="flex h-screen bg-bg-base">
       <Sidebar />
 
-      <main className="flex-1 flex flex-col items-center justify-center px-6">
+      <main className="flex-1 flex flex-col items-center justify-start pt-[20vh] px-6">
         <div className="w-full max-w-2xl">
           {/* Greeting */}
           <h1 className="text-2xl font-medium text-text-primary text-center mb-8">
@@ -114,7 +114,7 @@ export default function HomePage() {
               onKeyDown={handleKeyDown}
               placeholder="Send message to Manus"
               rows={1}
-              className="w-full bg-transparent resize-none text-[15px] text-text-primary placeholder:text-text-tertiary focus:outline-none min-h-[28px] max-h-[200px] mb-3"
+              className="w-full bg-transparent resize-none text-[15px] text-text-primary placeholder:text-text-tertiary focus:outline-none min-h-[28px] max-h-[200px] overflow-y-auto mb-3"
             />
             {/* Bottom toolbar */}
             <div className="flex items-center justify-between">

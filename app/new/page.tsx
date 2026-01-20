@@ -136,50 +136,75 @@ export default function NewProjectPage() {
 
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="h-14 px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-[15px] font-semibold text-text-primary">New Project</h1>
-          </div>
+        <header className="px-6 py-4">
+          <div className="flex items-start justify-between">
+            {/* Left side - Steps */}
+            <div className="flex flex-col gap-3">
+              {/* Step indicators */}
+              <div className="flex items-center gap-1">
+                {STEPS.map((s, i) => {
+                  const StepIcon = s.icon;
+                  const isActive = step === s.id;
+                  const isPast = i < currentStepIndex;
 
-          {/* Step indicators */}
-          <div className="flex items-center gap-1">
-            {STEPS.map((s, i) => {
-              const StepIcon = s.icon;
-              const isActive = step === s.id;
-              const isPast = i < currentStepIndex;
+                  return (
+                    <div key={s.id} className="flex items-center">
+                      <button
+                        onClick={() => setStep(s.id)}
+                        className={cn(
+                          'flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] transition-all duration-150',
+                          isActive
+                            ? 'bg-accent text-bg-base font-medium'
+                            : isPast
+                            ? 'text-accent hover:bg-accent-subtle'
+                            : 'text-text-tertiary hover:text-text-secondary hover:bg-bg-surface'
+                        )}
+                      >
+                        <StepIcon size={14} />
+                        <span>{s.label}</span>
+                      </button>
+                      {i < STEPS.length - 1 && (
+                        <IconChevronRight size={16} className="text-text-quaternary mx-1 shrink-0 mt-[2px]" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
-              return (
-                <div key={s.id} className="flex items-center">
-                  <button
-                    onClick={() => setStep(s.id)}
-                    className={cn(
-                      'flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] transition-all duration-150',
-                      isActive
-                        ? 'bg-accent text-bg-base font-medium'
-                        : isPast
-                        ? 'text-accent hover:bg-accent-subtle'
-                        : 'text-text-tertiary hover:text-text-secondary hover:bg-bg-surface'
-                    )}
-                  >
-                    <StepIcon size={14} />
-                    <span>{s.label}</span>
-                  </button>
-                  {i < STEPS.length - 1 && (
-                    <IconChevronRight size={16} className="text-text-quaternary mx-1 shrink-0 mt-[2px]" />
-                  )}
-                </div>
-              );
-            })}
+            {/* Right side - Action buttons */}
+            <div className="flex items-center gap-2">
+              {step !== 'files' && (
+                <button
+                  onClick={prevStep}
+                  className="px-4 py-1.5 text-[13px] rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-surface transition-all duration-150"
+                >
+                  Back
+                </button>
+              )}
+              <button
+                onClick={nextStep}
+                disabled={!canProceed()}
+                className={cn(
+                  'px-4 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-150',
+                  canProceed()
+                    ? 'bg-accent hover:bg-accent-hover text-bg-base'
+                    : 'bg-bg-surface text-text-quaternary cursor-not-allowed'
+                )}
+              >
+                {step === 'skills' ? 'Create Project' : 'Continue'}
+              </button>
+            </div>
           </div>
         </header>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-scroll">
           <div className="max-w-2xl mx-auto py-8 px-6">
             {/* Project name input */}
             <div className="mb-10">
-              <label className="block text-[13px] font-medium text-text-secondary mb-2">
-                Project name
+              <label className="block text-lg font-semibold text-text-primary mb-2">
+                New Project Name
               </label>
               <input
                 type="text"
@@ -457,43 +482,6 @@ export default function NewProjectPage() {
           </div>
         </div>
 
-        {/* Footer */}
-        <footer className="h-16 px-6 flex items-center justify-between">
-          <button
-            onClick={prevStep}
-            disabled={step === 'files'}
-            className={cn(
-              'px-4 py-2 text-[13px] rounded-lg transition-all duration-150',
-              step === 'files'
-                ? 'text-text-quaternary cursor-not-allowed'
-                : 'text-text-secondary hover:text-text-primary hover:bg-bg-surface'
-            )}
-          >
-            Back
-          </button>
-
-          <div className="flex items-center gap-4">
-            <span className="text-[13px] text-text-tertiary">
-              <span className="text-text-secondary">{files.length}</span> files
-              <span className="text-text-quaternary mx-2">·</span>
-              <span className="text-text-secondary">{selectedIntegrations.length}</span> integrations
-              <span className="text-text-quaternary mx-2">·</span>
-              <span className="text-text-secondary">{selectedSkills.length}</span> skills
-            </span>
-            <button
-              onClick={nextStep}
-              disabled={!canProceed()}
-              className={cn(
-                'px-5 py-2 rounded-lg text-[13px] font-medium transition-all duration-150',
-                canProceed()
-                  ? 'bg-accent hover:bg-accent-hover text-bg-base shadow-sm hover:shadow'
-                  : 'bg-bg-surface text-text-quaternary cursor-not-allowed'
-              )}
-            >
-              {step === 'skills' ? 'Create Project' : 'Continue'}
-            </button>
-          </div>
-        </footer>
       </main>
     </div>
   );

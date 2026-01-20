@@ -140,8 +140,15 @@ export function Sidebar() {
       if (task.workspaceId === currentWorkspace?.id) {
         setTasks(updated);
       }
-      if (currentTask?.id === task.id) {
+      const wasCurrentTask = currentTask?.id === task.id;
+      if (wasCurrentTask) {
         setCurrentTask(null);
+        // Navigate away after deleting current task
+        if (task.workspaceId === 'standalone') {
+          router.push('/');
+        } else {
+          router.push(`/${task.workspaceId}`);
+        }
       }
       setAllTasks(prev => prev.filter(t => t.id !== task.id));
     }

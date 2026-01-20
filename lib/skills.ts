@@ -31,29 +31,6 @@ export const AVAILABLE_SKILLS: Skill[] = [
     category: 'documents',
   },
 
-  // Browser
-  {
-    id: 'dev-browser',
-    name: 'dev-browser',
-    displayName: 'Dev Browser',
-    description: 'Browser automation with persistent state',
-    category: 'browser',
-  },
-  {
-    id: 'agent-browser',
-    name: 'agent-browser',
-    displayName: 'Agent Browser',
-    description: 'AI-powered browser automation',
-    category: 'browser',
-  },
-  {
-    id: 'webapp-testing',
-    name: 'webapp-testing',
-    displayName: 'Web Testing',
-    description: 'Test web applications end-to-end',
-    category: 'browser',
-  },
-
   // Research
   {
     id: 'content-research-writer',
@@ -282,12 +259,12 @@ export const AVAILABLE_SKILLS: Skill[] = [
   },
 ];
 
+// Ordered by most commonly used for general knowledge work
 export const SKILL_CATEGORIES = [
   { id: 'documents', name: 'Documents' },
-  { id: 'browser', name: 'Browser' },
   { id: 'research', name: 'Research' },
-  { id: 'design', name: 'Design' },
-  { id: 'development', name: 'Development' },
   { id: 'business', name: 'Business' },
   { id: 'media', name: 'Media' },
+  { id: 'design', name: 'Design' },
+  { id: 'development', name: 'Development' },
 ] as const;

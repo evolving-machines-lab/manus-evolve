@@ -558,19 +558,22 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                     </div>
                   ) : (
                     /* Assistant message - left aligned with branding */
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {/* Header with logo */}
-                      <div className="flex items-start gap-2">
-                        <IconLogo size={22} className="text-text-primary mt-0.5" />
-                        <div className="flex flex-col">
-                          <span className="text-[16px] font-semibold text-text-primary">manus</span>
-                          {/* Show spinner + fun word when streaming on last message */}
-                          {taskStream.isRunning && index === displayMessages.length - 1 && (
-                            <span className="text-[12px] text-text-tertiary flex items-center gap-1.5">
-                              <span className="text-accent">{spinnerChars[spinnerIndex]}</span>
-                              {funWords[funWordIndex]}
-                            </span>
-                          )}
+                      <div className="flex items-start gap-3">
+                        <IconLogo size={24} className="text-text-primary mt-0.5" />
+                        <div className="flex flex-col min-h-[44px]">
+                          <span className="text-[17px] font-semibold text-text-primary">manus</span>
+                          {/* Loading indicator - always reserve space, show/hide with opacity */}
+                          <span className={cn(
+                            "text-[14px] flex items-center gap-2 h-[20px] transition-opacity duration-150",
+                            taskStream.isRunning && index === displayMessages.length - 1
+                              ? "opacity-100 text-text-secondary"
+                              : "opacity-0"
+                          )}>
+                            <span className="text-accent text-[16px]">{spinnerChars[spinnerIndex]}</span>
+                            {funWords[funWordIndex]}
+                          </span>
                         </div>
                       </div>
                       {/* Message content */}
@@ -584,17 +587,15 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
 
               {/* Manus thinking indicator - shows when waiting for response */}
               {taskStream.isRunning && displayMessages[displayMessages.length - 1]?.role === 'user' && (
-                <div>
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-2">
-                      <IconLogo size={22} className="text-text-primary mt-0.5" />
-                      <div className="flex flex-col">
-                        <span className="text-[16px] font-semibold text-text-primary">manus</span>
-                        <span className="text-[12px] text-text-tertiary flex items-center gap-1.5">
-                          <span className="text-accent">{spinnerChars[spinnerIndex]}</span>
-                          {funWords[funWordIndex]}
-                        </span>
-                      </div>
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <IconLogo size={24} className="text-text-primary mt-0.5" />
+                    <div className="flex flex-col min-h-[44px]">
+                      <span className="text-[17px] font-semibold text-text-primary">manus</span>
+                      <span className="text-[14px] text-text-secondary flex items-center gap-2 h-[20px]">
+                        <span className="text-accent text-[16px]">{spinnerChars[spinnerIndex]}</span>
+                        {funWords[funWordIndex]}
+                      </span>
                     </div>
                   </div>
                 </div>

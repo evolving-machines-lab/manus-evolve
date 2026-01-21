@@ -185,10 +185,10 @@ export function SelectionModal({
                     key={integration.id}
                     onClick={() => toggleIntegration(integration.id)}
                     className={cn(
-                      'group flex items-center gap-3 p-4 rounded-xl text-left transition-all duration-150',
+                      'group flex items-center gap-3 p-4 rounded-xl text-left transition-all duration-150 outline-none',
                       isSelected
                         ? 'bg-accent-subtle border border-accent/50'
-                        : 'bg-bg-surface',
+                        : 'bg-bg-surface border border-transparent',
                       !readOnly && !isSelected && 'hover:bg-[#2a2a2a] cursor-pointer',
                       readOnly && 'cursor-default'
                     )}
@@ -254,10 +254,10 @@ export function SelectionModal({
                           key={skill.id}
                           onClick={() => toggleSkill(skill.id)}
                           className={cn(
-                            'group flex items-center gap-3 p-4 rounded-xl text-left transition-all duration-150',
+                            'group flex items-center gap-3 p-4 rounded-xl text-left transition-all duration-150 outline-none',
                             isSelected
                               ? 'bg-accent-subtle border border-accent/50'
-                              : 'bg-bg-surface',
+                              : 'bg-bg-surface border border-transparent',
                             !readOnly && !isSelected && 'hover:bg-[#2a2a2a] cursor-pointer',
                             readOnly && 'cursor-default'
                           )}

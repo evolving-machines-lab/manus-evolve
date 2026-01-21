@@ -94,32 +94,26 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
   useEffect(() => {
     if (isOpen) {
-      // Load all tasks when modal opens
-      const loadedTasks: Task[] = [];
-
-      // Standalone tasks
-      const standaloneTasks = localStorage.getItem('swarmkit-tasks-standalone');
-      if (standaloneTasks) {
-        loadedTasks.push(...JSON.parse(standaloneTasks));
-      }
-
-      // Project tasks
-      projects.forEach(p => {
-        const stored = localStorage.getItem(`swarmkit-tasks-${p.id}`);
-        if (stored) {
-          loadedTasks.push(...JSON.parse(stored));
+      // Load all tasks from API when modal opens
+      const fetchTasks = async () => {
+        try {
+          const response = await fetch('/api/tasks?showAll=true');
+          if (response.ok) {
+            const tasks = await response.json();
+            // Sort by date descending
+            tasks.sort((a: Task, b: Task) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            setAllTasks(tasks);
+          }
+        } catch (error) {
+          console.error('Error loading tasks:', error);
         }
-      });
-
-      // Sort by date descending
-      loadedTasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-      setAllTasks(loadedTasks);
+      };
+      fetchTasks();
       setQuery('');
       setSelectedIndex(-1);
       setTimeout(() => inputRef.current?.focus(), 0);
     }
-  }, [isOpen, projects]);
+  }, [isOpen]);
 
   // Filter results based on query
   const filteredProjects = query

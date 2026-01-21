@@ -131,12 +131,12 @@ export function Sidebar() {
   const editInputRef = useRef<HTMLInputElement>(null);
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
 
-  // Global keyboard shortcut for search (⌘K)
+  // Global keyboard shortcut for search (⌘K) - toggles
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setSearchOpen(true);
+        setSearchOpen(prev => !prev);
       }
     };
     document.addEventListener('keydown', handleKeyDown);

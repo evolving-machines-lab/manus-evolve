@@ -23,7 +23,7 @@ export interface AgentModel {
 export const AGENT_TYPES: AgentType[] = [
   {
     id: 'claude',
-    name: 'Claude',
+    name: 'Claude Code',
     provider: 'Anthropic',
     defaultModel: 'opus',
     models: [
@@ -34,7 +34,7 @@ export const AGENT_TYPES: AgentType[] = [
   },
   {
     id: 'codex',
-    name: 'Codex',
+    name: 'Codex CLI',
     provider: 'OpenAI',
     defaultModel: 'gpt-5.2',
     models: [
@@ -46,7 +46,7 @@ export const AGENT_TYPES: AgentType[] = [
   },
   {
     id: 'gemini',
-    name: 'Gemini',
+    name: 'Gemini CLI',
     provider: 'Google',
     defaultModel: 'gemini-3-flash-preview',
     models: [
@@ -59,7 +59,7 @@ export const AGENT_TYPES: AgentType[] = [
   },
   {
     id: 'qwen',
-    name: 'Qwen',
+    name: 'Qwen Code',
     provider: 'Alibaba',
     defaultModel: 'qwen3-coder-plus',
     models: [

@@ -360,15 +360,17 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
     <div className="flex-1 flex flex-col h-full bg-bg-base">
       {/* Header with breadcrumb */}
       <header className="h-14 px-4 flex items-center">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {/* Project breadcrumb (only for project tasks) */}
           {project && (
             <>
-              <IconFolder size={16} className="text-text-primary" />
-              <span className="text-[15px] font-medium text-text-primary">
-                {project.name}
-              </span>
-              <span className="text-text-quaternary">/</span>
+              <div className="flex items-center gap-2">
+                <IconFolder size={16} className="text-text-primary" />
+                <span className="text-[15px] font-medium text-text-primary">
+                  {project.name}
+                </span>
+              </div>
+              <span className="text-[15px] font-medium text-text-tertiary">/</span>
             </>
           )}
 
@@ -377,9 +379,9 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
             const agentType = AGENT_TYPES.find(a => a.id === task.agent) || AGENT_TYPES[0];
             const model = agentType.models.find(m => m.model === task.model) || agentType.models.find(m => m.isDefault);
             return (
-              <div className="flex items-baseline gap-1.5 px-3 py-2 rounded-xl bg-bg-surface/80">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-bg-surface/80">
                 <span className="text-[15px] font-medium text-text-primary">{agentType.name}</span>
-                <span className="text-[11px] text-text-tertiary">{model?.displayName}</span>
+                <span className="text-[13px] font-medium text-text-secondary">{model?.displayName}</span>
               </div>
             );
           })()}

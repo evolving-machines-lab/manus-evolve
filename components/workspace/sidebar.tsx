@@ -344,28 +344,30 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "flex flex-col h-full bg-bg-base border-r border-border-subtle transition-all duration-200",
+        "flex flex-col h-full bg-bg-base border-r border-border-subtle transition-[width] duration-300 ease-out",
         sidebarCollapsed ? "w-[68px]" : "w-[300px]"
       )}
     >
       {/* Header */}
-      <div className={cn(
-        "flex items-center h-14",
-        sidebarCollapsed ? "justify-center px-2" : "justify-between px-4"
-      )}>
-        {!sidebarCollapsed && (
-          <Link href="/" className="flex items-center gap-2">
-            <IconLogo size={22} className="text-text-secondary" />
-            <span className="font-medium text-[16px] text-text-primary">
-              Manus Evolve
-            </span>
-          </Link>
-        )}
+      <div className="flex items-center h-14 px-4 overflow-hidden">
+        <Link
+          href="/"
+          className={cn(
+            "flex items-center gap-2 transition-all duration-300 ease-out",
+            sidebarCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+          )}
+        >
+          <IconLogo size={22} className="text-text-secondary shrink-0" />
+          <span className="font-medium text-[16px] text-text-primary whitespace-nowrap">
+            Manus Evolve
+          </span>
+        </Link>
+        <div className="flex-1" />
         <button
           onClick={toggleSidebar}
-          className="p-2.5 text-text-primary hover:bg-[#2a2a2a] rounded-xl transition-colors"
+          className="p-2.5 text-text-primary hover:bg-[#2a2a2a] rounded-xl transition-colors shrink-0"
         >
-          <IconPanelRight size={18} className={cn(sidebarCollapsed && "rotate-180")} />
+          <IconPanelRight size={18} className={cn("transition-transform duration-300", sidebarCollapsed && "rotate-180")} />
         </button>
       </div>
 
@@ -757,22 +759,6 @@ export function Sidebar() {
 
       {/* Bottom Section */}
       <div className={cn("p-3 space-y-3", sidebarCollapsed && "mt-auto")}>
-        {/* Share card - hide when collapsed */}
-        {!sidebarCollapsed && (
-          <button className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-bg-surface hover:bg-bg-overlay transition-colors text-left">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-tertiary">
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-              <polyline points="16 6 12 2 8 6"/>
-              <line x1="12" y1="2" x2="12" y2="15"/>
-            </svg>
-            <div className="flex-1">
-              <p className="text-[14px] text-text-primary">Share Manus Evolve</p>
-              <p className="text-[12px] text-text-tertiary">Invite a friend</p>
-            </div>
-            <IconChevronRight size={16} className="text-text-quaternary" />
-          </button>
-        )}
-
         {/* Bottom icons */}
         <div className={cn(
           "flex items-center",

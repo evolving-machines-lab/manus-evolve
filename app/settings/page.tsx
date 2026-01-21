@@ -189,8 +189,7 @@ export default function SettingsPage() {
               return (
                 <div
                   key={category.id}
-                  className="mb-10 animate-slide-up"
-                  style={{ animationDelay: `${catIndex * 50}ms` }}
+                  className="mb-10"
                 >
                   <h3 className="text-2xs font-medium text-text-tertiary uppercase tracking-wider mb-4 px-1">
                     {category.name}
@@ -267,12 +266,10 @@ function IntegrationCard({
     <div
       className={cn(
         'group flex items-center gap-4 p-4 rounded-xl transition-all duration-150',
-        'animate-slide-up',
         integration.connected
           ? 'bg-success-muted'
           : 'bg-bg-surface hover:bg-bg-overlay'
       )}
-      style={{ animationDelay: `${delay}ms` }}
     >
       {/* Icon */}
       <div

@@ -140,16 +140,18 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
           if (!isOpen) setExpandedAgent(null);
         }}
         className={cn(
-          "flex items-baseline gap-2 px-3 py-2.5 rounded-xl hover:bg-[#2a2a2a] transition-colors",
+          "flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#2a2a2a] transition-colors",
           isOpen && "bg-[#2a2a2a]"
         )}
       >
-        <span className="text-[15px] font-medium text-text-primary">{currentAgent.name}</span>
-        <span className="text-[13px] font-medium text-text-secondary">{currentModel?.displayName}</span>
+        <div className="flex items-baseline gap-2">
+          <span className="text-[15px] font-medium text-text-primary">{currentAgent.name}</span>
+          <span className="text-[13px] font-medium text-text-secondary">{currentModel?.displayName}</span>
+        </div>
         <IconChevronDown
           size={14}
           className={cn(
-            "text-text-tertiary transition-transform duration-200 shrink-0 relative top-[1px]",
+            "text-text-tertiary transition-transform duration-200 shrink-0",
             isOpen && "rotate-180"
           )}
         />

@@ -129,8 +129,6 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
 
   const handleModelSelect = (agent: AgentType, model: AgentModel) => {
     onSelectionChange({ agent: agent.id, model: model.model });
-    setIsOpen(false);
-    setExpandedAgent(null);
   };
 
   return (

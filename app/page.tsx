@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/workspace/sidebar';
 import { SelectionModal } from '@/components/selection-modal';
-import { ModelSelector } from '@/components/model-selector';
+import { ModelSelector, type ModelSelection } from '@/components/model-selector';
 import { IconAttach, IconPlug, IconMic, IconSkill, IconX } from '@/components/ui/icons';
 import { useStore } from '@/lib/store';
 import { generateId, cn } from '@/lib/utils';
@@ -19,7 +19,7 @@ export default function HomePage() {
   const [modalTab, setModalTab] = useState<'integrations' | 'skills'>('integrations');
   const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
-  const [selectedModel, setSelectedModel] = useState('claude-opus');
+  const [modelSelection, setModelSelection] = useState<ModelSelection>({ agent: 'claude', model: 'opus' });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -57,7 +57,8 @@ export default function HomePage() {
       artifacts: [],
       integrations: selectedIntegrations,
       skills: selectedSkills,
-      model: selectedModel,
+      agent: modelSelection.agent,
+      model: modelSelection.model,
       createdAt: now,
       updatedAt: now,
     };
@@ -114,8 +115,8 @@ export default function HomePage() {
         {/* Model selector - top left */}
         <div className="absolute top-4 left-6">
           <ModelSelector
-            selectedModel={selectedModel}
-            onModelChange={setSelectedModel}
+            selection={modelSelection}
+            onSelectionChange={setModelSelection}
           />
         </div>
 

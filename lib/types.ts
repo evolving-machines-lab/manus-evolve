@@ -31,6 +31,7 @@ export interface Task {
   artifacts: Artifact[];
   integrations?: string[];
   skills?: string[];
+  agent?: 'claude' | 'codex' | 'gemini' | 'qwen';
   model?: string;
   sessionId?: string;
   browserUrl?: string;

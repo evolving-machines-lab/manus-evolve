@@ -10,7 +10,16 @@ export async function GET() {
       where: eq(projects.userId, DEFAULT_USER_ID),
       orderBy: (projects, { desc }) => [desc(projects.updatedAt)],
       with: {
-        files: true,
+        files: {
+          columns: {
+            id: true,
+            name: true,
+            path: true,
+            size: true,
+            type: true,
+            // Exclude content BLOB column - can't serialize to JSON
+          },
+        },
         integrations: {
           with: {
             integration: true,

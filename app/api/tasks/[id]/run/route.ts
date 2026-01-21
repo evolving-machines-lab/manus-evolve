@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db, tasks, messages, progressItems, toolCalls, projects, DEFAULT_USER_ID } from '@/lib/db';
+import { db, tasks, messages, progressItems, toolCalls, projects, projectFiles, taskContextFiles, DEFAULT_USER_ID } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import {
@@ -57,18 +57,14 @@ export async function POST(
   const timeoutMs = body.timeoutMs || 60 * 60 * 1000; // Default 1 hour
 
   // Get context files - either from project or from task
+  // Use select query instead of relational query to handle BLOB content properly
   let contextFiles: FileMap = {};
   if (task.projectId) {
     // Project-based task: get project files
-    const project = await db.query.projects.findFirst({
-      where: eq(projects.id, task.projectId!),
-      with: {
-        files: true,
-      },
-    });
-    if (project?.files) {
+    const files = db.select().from(projectFiles).where(eq(projectFiles.projectId, task.projectId!)).all();
+    if (files.length > 0) {
       contextFiles = prepareContextFiles(
-        project.files.map((f) => ({
+        files.map((f) => ({
           name: f.name,
           path: f.path,
           content: f.content
@@ -79,15 +75,10 @@ export async function POST(
     }
   } else {
     // Standalone task: get task context files
-    const taskWithFiles = await db.query.tasks.findFirst({
-      where: eq(tasks.id, taskId),
-      with: {
-        contextFiles: true,
-      },
-    });
-    if (taskWithFiles?.contextFiles) {
+    const files = db.select().from(taskContextFiles).where(eq(taskContextFiles.taskId, taskId)).all();
+    if (files.length > 0) {
       contextFiles = prepareContextFiles(
-        taskWithFiles.contextFiles.map((f) => ({
+        files.map((f) => ({
           name: f.name,
           path: f.path,
           content: f.content

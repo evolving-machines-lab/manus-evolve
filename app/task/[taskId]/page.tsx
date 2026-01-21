@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/workspace/sidebar';
 import { TaskView } from '@/components/task/task-view';
@@ -18,27 +18,41 @@ export default function StandaloneTaskPage() {
     currentTask,
     setCurrentTask,
     setCurrentProject,
+    updateTask,
   } = useStore();
 
   const [loading, setLoading] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [defaultTab, setDefaultTab] = useState<'files' | 'artifacts' | 'browser'>('browser');
+  const hasFetchedRef = useRef(false);
 
+  // Fetch task once on mount
   useEffect(() => {
-    // Load standalone tasks
-    const stored = localStorage.getItem('swarmkit-tasks-standalone');
-    if (stored) {
-      const tasks: Task[] = JSON.parse(stored);
-      const task = tasks.find(t => t.id === taskId);
-      if (task) {
-        setCurrentTask(task);
-        setCurrentProject(null); // No project for standalone tasks
-        setLoading(false);
-        return;
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
+    const fetchTask = async () => {
+      try {
+        const response = await fetch(`/api/tasks`);
+        if (response.ok) {
+          const tasks: Task[] = await response.json();
+          const task = tasks.find(t => t.id === taskId);
+          if (task) {
+            setCurrentTask(task);
+            setCurrentProject(null);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching task:', error);
       }
-    }
-    // Task not found, redirect home
-    router.push('/');
+
+      // Task not found, redirect home
+      router.push('/');
+    };
+
+    fetchTask();
   }, [taskId, router, setCurrentTask, setCurrentProject]);
 
   const handleOpenPanel = (tab: 'files' | 'artifacts' | 'browser' = 'browser') => {

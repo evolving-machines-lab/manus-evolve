@@ -40,38 +40,63 @@ export default function HomePage() {
     }
   }, [input]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!input.trim()) return;
 
-    const taskId = generateId();
-    const now = new Date().toISOString();
+    const prompt = input.trim();
+    setInput(''); // Clear input immediately
 
-    const newTask = {
-      id: taskId,
-      projectId: 'standalone',
-      title: input.trim().slice(0, 50),
-      status: 'running' as const,
-      prompt: input.trim(),
-      messages: [{ id: generateId(), role: 'user' as const, contentType: 'text' as const, content: input.trim(), timestamp: now }],
-      progress: [],
-      artifacts: [],
-      integrations: selectedIntegrations,
-      skills: selectedSkills,
-      agent: modelSelection.agent,
-      model: modelSelection.model,
-      createdAt: now,
-      updatedAt: now,
-    };
+    try {
+      // Create task via API
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: 'standalone',
+          title: prompt.slice(0, 50),
+          prompt,
+          agent: modelSelection.agent,
+          model: modelSelection.model,
+          integrations: selectedIntegrations,
+          skills: selectedSkills,
+        }),
+      });
 
-    const existingTasks = JSON.parse(localStorage.getItem('swarmkit-tasks-standalone') || '[]');
-    existingTasks.push(newTask);
-    localStorage.setItem('swarmkit-tasks-standalone', JSON.stringify(existingTasks));
+      if (!response.ok) {
+        throw new Error('Failed to create task');
+      }
 
-    setCurrentProject(null);
-    addTask(newTask);
-    setCurrentTask(newTask);
+      const createdTask = await response.json();
 
-    router.push(`/task/${taskId}`);
+      // Build task object for store
+      const newTask = {
+        id: createdTask.id,
+        projectId: 'standalone',
+        title: createdTask.title,
+        prompt: createdTask.prompt,
+        status: 'pending' as const,
+        messages: createdTask.messages || [],
+        progress: [],
+        artifacts: [],
+        integrations: selectedIntegrations,
+        skills: selectedSkills,
+        agent: modelSelection.agent,
+        model: modelSelection.model,
+        createdAt: createdTask.createdAt,
+        updatedAt: createdTask.updatedAt,
+      };
+
+      // Update store
+      setCurrentProject(null);
+      addTask(newTask);
+      setCurrentTask(newTask);
+
+      // Navigate to task page (which will start the agent)
+      router.push(`/task/${createdTask.id}`);
+    } catch (error) {
+      console.error('Error creating task:', error);
+      setInput(prompt); // Restore input on error
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -108,7 +133,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="flex h-screen bg-bg-base">
+    <div className="flex h-screen bg-bg-content">
       <Sidebar />
 
       <main className="flex-1 flex flex-col px-6 relative">
@@ -130,7 +155,7 @@ export default function HomePage() {
 
           {/* Input box */}
           <div className={cn(
-            'rounded-3xl border bg-bg-surface p-4 transition-all duration-150',
+            'rounded-3xl border bg-bg-content-surface p-4 transition-all duration-150',
             'border-border-subtle',
             'focus-within:border-border-default'
           )}>

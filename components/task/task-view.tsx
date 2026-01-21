@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   IconChevronDown,
   StatusDot,
@@ -13,12 +13,14 @@ import {
   IconSkill,
   IconX,
   IconFolder,
+  IconLogo,
 } from '@/components/ui/icons';
 import { SelectionModal } from '@/components/selection-modal';
 import { ModelSelector, AGENT_TYPES, type ModelSelection } from '@/components/model-selector';
 import { useStore } from '@/lib/store';
 import { cn, generateId } from '@/lib/utils';
-import type { Task, Project, Message } from '@/lib/types';
+import { useTaskStream } from '@/lib/hooks/use-task-stream';
+import type { Task, Project, Message, ToolCall, ProgressItem } from '@/lib/types';
 import ReactMarkdown from 'react-markdown';
 import { AVAILABLE_INTEGRATIONS } from '@/lib/integrations';
 import { AVAILABLE_SKILLS } from '@/lib/skills';
@@ -47,8 +49,57 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const hasAutoStartedRef = useRef<string | null>(null);
 
-  const { updateTask } = useStore();
+  const { updateTask, addTask, setCurrentTask } = useStore();
+
+  // Task streaming hook
+  const taskStream = useTaskStream({
+    onMessage: (message) => {
+      if (task) {
+        // Get current task from store to avoid stale closure
+        const currentTask = useStore.getState().currentTask;
+        const currentMessages = currentTask?.messages || [];
+        updateTask(task.id, {
+          messages: [...currentMessages, message],
+        });
+      }
+    },
+    onProgress: (progress) => {
+      if (task) {
+        updateTask(task.id, { progress });
+      }
+    },
+    onBrowserUrl: (liveUrl, screenshotUrl) => {
+      if (task) {
+        const currentTask = useStore.getState().currentTask;
+        updateTask(task.id, {
+          browserLiveUrl: liveUrl || currentTask?.browserLiveUrl,
+          browserScreenshotUrl: screenshotUrl || currentTask?.browserScreenshotUrl,
+        });
+      }
+    },
+    onComplete: () => {
+      if (task) {
+        updateTask(task.id, { status: 'completed' });
+      }
+    },
+    onError: (error) => {
+      console.error('Task error:', error);
+      if (task) {
+        updateTask(task.id, { status: 'failed' });
+      }
+    },
+  });
+
+  // Auto-start task if pending (only once per task)
+  useEffect(() => {
+    if (task && task.status === 'pending' && hasAutoStartedRef.current !== task.id) {
+      hasAutoStartedRef.current = task.id;
+      updateTask(task.id, { status: 'running' });
+      taskStream.runTask(task.id);
+    }
+  }, [task?.id, task?.status, taskStream, updateTask]);
 
   // Update selections when project changes
   useEffect(() => {
@@ -58,7 +109,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [task?.messages]);
+  }, [task?.messages, taskStream.messages]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -78,30 +129,18 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
       timestamp: new Date().toISOString(),
     };
 
-    const updatedMessages = [...task.messages, userMessage];
-    const updatedTask: Partial<Task> = {
-      messages: updatedMessages,
+    // Optimistic update
+    updateTask(task.id, {
+      messages: [...task.messages, userMessage],
       status: 'running',
       title: task.title === 'New Task' ? input.trim().slice(0, 50) : task.title,
-      prompt: task.prompt || input.trim(),
-      progress: [
-        { id: generateId(), content: 'Analyzing project context', status: 'in_progress', priority: 'high' },
-        { id: generateId(), content: 'Processing request', status: 'pending', priority: 'medium' },
-      ],
-    };
+    });
 
-    updateTask(task.id, updatedTask);
-
-    const storageKey = project ? `swarmkit-tasks-${project.id}` : 'swarmkit-tasks-standalone';
-    const stored = localStorage.getItem(storageKey);
-    const tasks = stored ? JSON.parse(stored) : [];
-    const idx = tasks.findIndex((t: Task) => t.id === task.id);
-    if (idx !== -1) {
-      tasks[idx] = { ...tasks[idx], ...updatedTask };
-      localStorage.setItem(storageKey, JSON.stringify(tasks));
-    }
-
+    const prompt = input.trim();
     setInput('');
+
+    // Run task with streaming
+    await taskStream.runTask(task.id, prompt);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -111,52 +150,84 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
     }
   };
 
-  const completedSteps = task?.progress.filter((p) => p.status === 'completed').length || 0;
-  const totalSteps = task?.progress.length || 0;
-  const isRunning = task?.status === 'running';
+  // Use streaming state when running, combined with existing task messages
+  const displayProgress = taskStream.isRunning && taskStream.progress.length > 0
+    ? taskStream.progress
+    : (task?.progress || []);
 
-  const handleCreateTask = () => {
+  // Combine task messages with streaming messages (avoid duplicates by ID)
+  const baseMessages = task?.messages || [];
+  const streamingMessages = taskStream.messages || [];
+  const displayMessages = taskStream.isRunning
+    ? [
+        ...baseMessages,
+        ...streamingMessages.filter(sm => !baseMessages.some(bm => bm.id === sm.id))
+      ]
+    : baseMessages;
+
+  const displayBrowserLiveUrl = taskStream.browserLiveUrl || task?.browserLiveUrl;
+  const displayBrowserScreenshotUrl = taskStream.browserScreenshotUrl || task?.browserScreenshotUrl;
+
+  const completedSteps = displayProgress.filter((p) => p.status === 'completed').length || 0;
+  const totalSteps = displayProgress.length || 0;
+  const isRunning = taskStream.isRunning || task?.status === 'running';
+
+  const handleCreateTask = async () => {
     if (!input.trim()) return;
 
     const projectId = project?.id || 'standalone';
+    const prompt = input.trim();
 
-    const newTask: Task = {
-      id: generateId(),
-      projectId,
-      title: input.trim().slice(0, 50),
-      prompt: input.trim(),
-      status: 'running',
-      messages: [{
-        id: generateId(),
-        role: 'user',
-        contentType: 'text',
-        content: input.trim(),
-        timestamp: new Date().toISOString(),
-      }],
-      progress: [
-        { id: generateId(), content: 'Analyzing request', status: 'in_progress', priority: 'high' },
-        { id: generateId(), content: 'Processing', status: 'pending', priority: 'medium' },
-      ],
-      artifacts: [],
-      integrations: selectedIntegrations,
-      skills: selectedSkills,
-      agent: modelSelection.agent,
-      model: modelSelection.model,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    try {
+      // Create task via API
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId,
+          title: prompt.slice(0, 50),
+          prompt,
+          agent: modelSelection.agent,
+          model: modelSelection.model,
+          integrations: selectedIntegrations,
+          skills: selectedSkills,
+        }),
+      });
 
-    const { addTask, setCurrentTask } = useStore.getState();
-    addTask(newTask);
-    setCurrentTask(newTask);
+      if (!response.ok) {
+        throw new Error('Failed to create task');
+      }
 
-    const storageKey = project ? `swarmkit-tasks-${project.id}` : 'swarmkit-tasks-standalone';
-    const stored = localStorage.getItem(storageKey);
-    const tasks = stored ? JSON.parse(stored) : [];
-    tasks.push(newTask);
-    localStorage.setItem(storageKey, JSON.stringify(tasks));
+      const createdTask = await response.json();
 
-    setInput('');
+      // Add to store and set as current
+      const newTask: Task = {
+        id: createdTask.id,
+        projectId,
+        title: createdTask.title,
+        prompt: createdTask.prompt,
+        status: 'pending',
+        messages: createdTask.messages || [],
+        progress: [],
+        artifacts: [],
+        integrations: selectedIntegrations,
+        skills: selectedSkills,
+        agent: modelSelection.agent,
+        model: modelSelection.model,
+        createdAt: createdTask.createdAt,
+        updatedAt: createdTask.updatedAt,
+      };
+
+      addTask(newTask);
+      setCurrentTask(newTask);
+
+      setInput('');
+
+      // Run the task with streaming
+      await taskStream.runTask(newTask.id);
+    } catch (error) {
+      console.error('Error creating task:', error);
+    }
   };
 
   const handleEmptyKeyDown = (e: React.KeyboardEvent) => {
@@ -196,7 +267,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
   const renderInputSection = (onSubmit: () => void, onKeyDown: (e: React.KeyboardEvent) => void, disabled = false, showSelections = true) => (
     <>
       <div className={cn(
-        'rounded-3xl border bg-bg-surface p-4 transition-all duration-150',
+        'rounded-3xl border bg-bg-content-surface p-4 transition-all duration-150',
         'border-border-subtle',
         'focus-within:border-border-default'
       )}>
@@ -339,7 +410,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
 
   if (!task) {
     return (
-      <div className="flex-1 flex flex-col bg-bg-base relative">
+      <div className="flex-1 flex flex-col bg-bg-content relative">
         {/* Model selector - top left */}
         <div className="absolute top-4 left-4 flex items-center gap-3">
           {/* Project breadcrumb (only for project tasks) */}
@@ -386,9 +457,9 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-bg-base relative">
-      {/* Model display - top left */}
-      <div className="absolute top-4 left-4 flex items-center gap-3">
+    <div className="flex-1 flex flex-col h-full bg-bg-content relative">
+      {/* Model display - top left (fixed header that covers scrolling content) */}
+      <div className="absolute top-0 left-0 right-0 h-14 bg-bg-content z-10 flex items-center px-4 gap-3">
         {/* Project breadcrumb (only for project tasks) */}
         {project && (
           <>
@@ -418,39 +489,62 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto pt-14">
         <div className="max-w-3xl mx-auto px-6 py-6">
-          {task.messages.length === 0 ? (
+          {displayMessages.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-text-tertiary text-[14px]">
                 Start by describing what you want to accomplish
               </p>
             </div>
           ) : (
-            <div className="space-y-5">
-              {task.messages.map((message, index) => (
+            <div className="space-y-6">
+              {displayMessages.map((message, index) => (
                 <div
                   key={message.id}
-                  className={cn(
-                    'animate-slide-up',
-                    message.role === 'user' ? 'flex justify-end' : ''
-                  )}
+                  className="animate-slide-up"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <div
-                    className={cn(
-                      'max-w-[80%]',
-                      message.role === 'user' ? 'text-text-secondary' : ''
-                    )}
-                  >
-                    {message.role === 'assistant' ? (
-                      <div className="prose prose-invert prose-sm max-w-none text-text-primary leading-relaxed">
+                  {message.role === 'user' ? (
+                    /* User message - right aligned bubble */
+                    <div className="flex justify-end">
+                      <div className="max-w-[70%] bg-[#3a3a3a] rounded-2xl px-4 py-3">
+                        <p className="text-[15px] text-text-primary whitespace-pre-wrap">
+                          {message.content}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Assistant message - left aligned with branding */
+                    <div className="space-y-3">
+                      {/* Header with logo and model badge */}
+                      <div className="flex items-center gap-2">
+                        <IconLogo size={22} className="text-text-primary" />
+                        <span className="text-[16px] font-semibold text-text-primary">manus</span>
+                        <span className="text-[12px] px-2 py-0.5 rounded-md bg-[#2a2a2a] text-text-tertiary border border-border-subtle">
+                          {(() => {
+                            const agentType = AGENT_TYPES.find(a => a.id === task?.agent) || AGENT_TYPES[0];
+                            const model = agentType.models.find(m => m.model === task?.model) || agentType.models.find(m => m.isDefault);
+                            return model?.displayName || 'Lite';
+                          })()}
+                        </span>
+                      </div>
+                      {/* Message content */}
+                      <div className="prose prose-invert prose-sm max-w-none text-[15px] text-text-primary leading-relaxed">
                         <ReactMarkdown>{message.content}</ReactMarkdown>
                       </div>
-                    ) : (
-                      <p className="text-[14px] text-text-primary whitespace-pre-wrap">{message.content}</p>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               ))}
+
+              {/* Task completed indicator */}
+              {task?.status === 'completed' && !taskStream.isRunning && (
+                <div className="flex items-center gap-2 mt-4">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-green-500">
+                    <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span className="text-[14px] text-green-500">Task completed</span>
+                </div>
+              )}
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -490,7 +584,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                     <div className="flex items-center gap-3">
                       <div className="flex-1 flex items-center gap-3">
                         {(() => {
-                          const currentStep = task.progress.find(p => p.status === 'in_progress') || task.progress[task.progress.length - 1];
+                          const currentStep = displayProgress.find(p => p.status === 'in_progress') || displayProgress[displayProgress.length - 1];
                           if (!currentStep) return <span className="text-[13px] text-text-tertiary flex-1">Ready</span>;
                           return (
                             <>
@@ -512,7 +606,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                       </div>
 
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        {task.progress.length > 0 && (
+                        {displayProgress.length > 0 && (
                           <span className="text-[12px] text-text-tertiary">{completedSteps} / {totalSteps}</span>
                         )}
                         <button
@@ -580,14 +674,14 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                     </div>
                   </div>
 
-                  {task.progress.length > 0 && (
+                  {displayProgress.length > 0 && (
                     <div className="mt-4 rounded-2xl border border-border-subtle bg-bg-overlay p-5">
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-[15px] font-medium text-text-primary">Task progress</h3>
                         <span className="text-[13px] text-text-tertiary">{completedSteps} / {totalSteps}</span>
                       </div>
                       <div className="space-y-4">
-                        {task.progress.map((item) => (
+                        {displayProgress.map((item) => (
                           <div key={item.id} className="flex items-start gap-3">
                             {item.status === 'completed' ? (
                               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-green-500 mt-0.5 flex-shrink-0">

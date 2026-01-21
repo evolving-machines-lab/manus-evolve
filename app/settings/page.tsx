@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Sidebar } from '@/components/workspace/sidebar';
 import { IconPlug, IconCheck, IconSpinner, IconX, IconSearch } from '@/components/ui/icons';
 import { useStore } from '@/lib/store';
@@ -13,15 +13,17 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    const stored = localStorage.getItem('swarmkit-integrations');
-    if (stored) {
-      try {
-        setIntegrations(JSON.parse(stored));
-      } catch (e) {
-        console.error('Failed to parse integrations:', e);
+  // Fetch integrations from API on mount
+  const fetchIntegrations = useCallback(async () => {
+    try {
+      const response = await fetch('/api/integrations');
+      if (response.ok) {
+        const data = await response.json();
+        setIntegrations(data);
       }
-    } else {
+    } catch (error) {
+      console.error('Failed to fetch integrations:', error);
+      // Fallback to default integrations
       const initial: Integration[] = AVAILABLE_INTEGRATIONS.map((i) => ({
         ...i,
         connected: false,
@@ -30,27 +32,91 @@ export default function SettingsPage() {
     }
   }, [setIntegrations]);
 
+  useEffect(() => {
+    fetchIntegrations();
+  }, [fetchIntegrations]);
+
+  // Handle OAuth connect - get auth URL and open in new window
   const handleConnect = async (integrationId: string) => {
     setLoading(integrationId);
 
-    // Simulate OAuth flow
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      // Get the integration name for Composio
+      const integration = integrations.find((i) => i.id === integrationId);
+      if (!integration) {
+        throw new Error('Integration not found');
+      }
 
-    const updated = integrations.map((i) =>
-      i.id === integrationId ? { ...i, connected: true, accountId: `ca_${Date.now()}` } : i
-    );
-    setIntegrations(updated);
-    localStorage.setItem('swarmkit-integrations', JSON.stringify(updated));
+      // Call Composio auth endpoint to get OAuth URL
+      const response = await fetch(`/api/composio/auth/${integration.name}`, {
+        method: 'POST',
+      });
 
-    setLoading(null);
+      if (!response.ok) {
+        throw new Error('Failed to get auth URL');
+      }
+
+      const { url } = await response.json();
+
+      if (url) {
+        // Open OAuth URL in popup window
+        const popup = window.open(
+          url,
+          `Connect ${integration.displayName}`,
+          'width=600,height=700,scrollbars=yes'
+        );
+
+        // Poll for popup close and check connection status
+        const checkPopup = setInterval(async () => {
+          if (popup?.closed) {
+            clearInterval(checkPopup);
+
+            // Check if connection was successful
+            const statusResponse = await fetch(`/api/composio/auth/${integration.name}`);
+            if (statusResponse.ok) {
+              const { connected } = await statusResponse.json();
+              if (connected) {
+                // Refresh integrations list
+                await fetchIntegrations();
+              }
+            }
+
+            setLoading(null);
+          }
+        }, 1000);
+
+        // Timeout after 5 minutes
+        setTimeout(() => {
+          clearInterval(checkPopup);
+          setLoading(null);
+        }, 5 * 60 * 1000);
+      } else {
+        // No URL returned - might be already connected or error
+        setLoading(null);
+      }
+    } catch (error) {
+      console.error('Error connecting integration:', error);
+      setLoading(null);
+    }
   };
 
-  const handleDisconnect = (integrationId: string) => {
-    const updated = integrations.map((i) =>
-      i.id === integrationId ? { ...i, connected: false, accountId: undefined } : i
-    );
-    setIntegrations(updated);
-    localStorage.setItem('swarmkit-integrations', JSON.stringify(updated));
+  // Handle disconnect
+  const handleDisconnect = async (integrationId: string) => {
+    try {
+      const response = await fetch(`/api/integrations/${integrationId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Update local state
+        const updated = integrations.map((i) =>
+          i.id === integrationId ? { ...i, connected: false, accountId: undefined } : i
+        );
+        setIntegrations(updated);
+      }
+    } catch (error) {
+      console.error('Error disconnecting integration:', error);
+    }
   };
 
   const filteredIntegrations = searchQuery

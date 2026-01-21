@@ -13,6 +13,9 @@ module.exports = {
           surface: 'var(--bg-surface)',
           overlay: 'var(--bg-overlay)',
           subtle: 'var(--bg-subtle)',
+          content: 'var(--bg-content)',
+          'content-surface': 'var(--bg-content-surface)',
+          'content-overlay': 'var(--bg-content-overlay)',
         },
         border: {
           subtle: 'var(--border-subtle)',

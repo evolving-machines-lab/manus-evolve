@@ -31,6 +31,24 @@ const evolve = new Evolve()
 | `gemini` | `gemini-3-pro-preview`, `gemini-3-flash-preview`, `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.5-flash-lite` | `gemini-3-flash-preview` |
 | `qwen` | `qwen3-coder-plus`, `qwen3-vl-plus` | `qwen3-coder-plus` |
 
+### Agent-Specific Options
+
+```ts
+// Codex - reasoning effort
+.withAgent({
+  type: "codex",
+  model: "gpt-5.2-codex",
+  reasoningEffort: "low" | "medium" | "high" | "xhigh",  // Codex only
+})
+
+// Claude Sonnet - betas
+.withAgent({
+  type: "claude",
+  model: "sonnet",
+  betas: ["context-1m-2025-08-07"],  // Claude Sonnet only
+})
+```
+
 ---
 
 ## 2. Task Execution
@@ -51,7 +69,20 @@ const evolve = new Evolve()
   .withComposio(userId, { toolkits: task.integrations })
   .withSystemPrompt("You are Manus Evolve...");
 
-const result = await evolve.run({ prompt: userMessage });
+const result = await evolve.run({
+  prompt: userMessage,
+  timeoutMs: 15 * 60 * 1000,  // Optional, default 1 hour (3_600_000ms)
+  background: false,           // Optional, run in background
+});
+```
+
+#### Run Options
+```ts
+interface RunOptions {
+  prompt: string;
+  timeoutMs?: number;   // Default: 3_600_000 (1 hour)
+  background?: boolean; // Default: false - if true, returns immediately while agent runs
+}
 ```
 
 #### Continue Conversation
@@ -147,6 +178,8 @@ evolve.on("content", (event: OutputEvent) => {
 |------|-------|-------------|
 | `read` | Read, NotebookRead | Reading files |
 | `edit` | Edit, Write, NotebookEdit | Modifying files |
+| `delete` | (future) | Deleting files |
+| `move` | (future) | Moving/renaming files |
 | `search` | Glob, Grep, LS | Searching files |
 | `execute` | Bash, BashOutput, KillShell | Running commands |
 | `think` | Task (subagent) | Agent thinking |
@@ -385,8 +418,9 @@ const connections = await Evolve.composio.connections("user_123");
 evolve.withComposio("user_123", {
   toolkits: ["github", "gmail", "slack"],
   tools: {
-    github: ["github_create_issue", "github_list_repos"],  // Enable specific
-    gmail: { disable: ["gmail_delete_email"] },            // Disable dangerous
+    github: ["github_create_issue", "github_list_repos"],  // Enable specific tools
+    gmail: { disable: ["gmail_delete_email"] },            // Disable dangerous tools
+    slack: { tags: ["readOnlyHint"] },                     // Filter by behavior tags
   },
 });
 ```
@@ -400,6 +434,31 @@ evolve.withComposio("user_123", {
     sendgrid: process.env.SENDGRID_API_KEY,
   },
 });
+```
+
+#### White-Label OAuth
+```ts
+// Use custom OAuth configs from Composio dashboard
+evolve.withComposio("user_123", {
+  toolkits: ["github"],
+  authConfigs: { github: "ac_your_custom_oauth_app" },  // Custom OAuth app ID
+});
+```
+
+#### Composio Config Type
+```ts
+interface ComposioConfig {
+  toolkits?: string[];                                   // e.g. ["gmail", "notion", "stripe"]
+  tools?: Record<string, ToolsFilter>;                   // Per-toolkit tool filtering
+  keys?: Record<string, string>;                         // API keys (bypasses OAuth)
+  authConfigs?: Record<string, string>;                  // Custom OAuth auth config IDs
+}
+
+type ToolsFilter =
+  | string[]                    // Enable only these tools
+  | { enable: string[] }        // Enable only these tools
+  | { disable: string[] }       // Disable these tools
+  | { tags: string[] };         // Filter by behavior tags
 ```
 
 ---

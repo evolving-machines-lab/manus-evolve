@@ -157,32 +157,29 @@ export function Sidebar() {
   };
 
   // Delete a task
-  const deleteTask = (task: Task) => {
-    // Handle both old (workspaceId) and new (projectId) task formats
-    const taskProjectId = task.projectId || (task as unknown as { workspaceId?: string }).workspaceId || 'standalone';
-    const storageKey = taskProjectId === 'standalone'
-      ? 'swarmkit-tasks-standalone'
-      : `swarmkit-tasks-${taskProjectId}`;
+  const deleteTask = async (task: Task) => {
+    try {
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: 'DELETE',
+      });
 
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      const taskList = JSON.parse(stored) as Task[];
-      const updated = taskList.filter(t => t.id !== task.id);
-      localStorage.setItem(storageKey, JSON.stringify(updated));
-      if (taskProjectId === currentProject?.id) {
-        setTasks(updated);
-      }
-      const wasCurrentTask = currentTask?.id === task.id;
-      if (wasCurrentTask) {
-        setCurrentTask(null);
-        // Navigate away after deleting current task
-        if (taskProjectId === 'standalone') {
-          router.push('/');
-        } else {
-          router.push(`/${taskProjectId}`);
+      if (response.ok) {
+        // Update local state
+        setAllTasks(prev => prev.filter(t => t.id !== task.id));
+
+        const wasCurrentTask = currentTask?.id === task.id;
+        if (wasCurrentTask) {
+          setCurrentTask(null);
+          const taskProjectId = task.projectId || 'standalone';
+          if (taskProjectId === 'standalone') {
+            router.push('/');
+          } else {
+            router.push(`/${taskProjectId}`);
+          }
         }
       }
-      setAllTasks(prev => prev.filter(t => t.id !== task.id));
+    } catch (error) {
+      console.error('Error deleting task:', error);
     }
   };
 
@@ -215,33 +212,36 @@ export function Sidebar() {
   };
 
   // Save task rename
-  const saveTaskRename = (task: Task) => {
+  const saveTaskRename = async (task: Task) => {
     if (!editValue.trim()) {
       setEditingId(null);
       return;
     }
-    const storageKey = task.projectId === 'standalone'
-      ? 'swarmkit-tasks-standalone'
-      : `swarmkit-tasks-${task.projectId}`;
 
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      const taskList = JSON.parse(stored) as Task[];
-      const updated = taskList.map(t =>
-        t.id === task.id ? { ...t, title: editValue.trim() } : t
-      );
-      localStorage.setItem(storageKey, JSON.stringify(updated));
+    const newTitle = editValue.trim();
 
-      // Update allTasks state
-      setAllTasks(prev => prev.map(t =>
-        t.id === task.id ? { ...t, title: editValue.trim() } : t
-      ));
+    try {
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle }),
+      });
 
-      // Update current task if it's the one being renamed
-      if (currentTask?.id === task.id) {
-        setCurrentTask({ ...currentTask, title: editValue.trim() });
+      if (response.ok) {
+        // Update allTasks state
+        setAllTasks(prev => prev.map(t =>
+          t.id === task.id ? { ...t, title: newTitle } : t
+        ));
+
+        // Update current task if it's the one being renamed
+        if (currentTask?.id === task.id) {
+          setCurrentTask({ ...currentTask, title: newTitle });
+        }
       }
+    } catch (error) {
+      console.error('Error renaming task:', error);
     }
+
     setEditingId(null);
   };
 
@@ -259,37 +259,22 @@ export function Sidebar() {
     }
   };
 
-  // Load all tasks from all projects + standalone tasks
+  // Load all tasks from API on mount and when currentTask changes (e.g., after task creation)
   useEffect(() => {
-    const loadedTasks: Task[] = [];
-
-    // Load standalone tasks (tasks without a project)
-    const standaloneTasks = localStorage.getItem('swarmkit-tasks-standalone');
-    if (standaloneTasks) {
-      const parsed = JSON.parse(standaloneTasks) as Task[];
-      loadedTasks.push(...parsed);
-    }
-
-    // Load tasks from each project
-    projects.forEach(ws => {
-      const stored = localStorage.getItem(`swarmkit-tasks-${ws.id}`);
-      if (stored) {
-        const wsTasks = JSON.parse(stored) as Task[];
-        loadedTasks.push(...wsTasks);
+    const fetchTasks = async () => {
+      try {
+        const response = await fetch('/api/tasks');
+        if (response.ok) {
+          const apiTasks = await response.json();
+          setAllTasks(apiTasks);
+        }
+      } catch (error) {
+        console.error('Error fetching tasks:', error);
       }
-    });
-    setAllTasks(loadedTasks);
-  }, [projects, tasks]);
+    };
 
-  // Load tasks for current project
-  useEffect(() => {
-    if (currentProject) {
-      const stored = localStorage.getItem(`swarmkit-tasks-${currentProject.id}`);
-      if (stored) {
-        setTasks(JSON.parse(stored));
-      }
-    }
-  }, [currentProject, setTasks]);
+    fetchTasks();
+  }, [currentTask?.id]); // Re-fetch when current task changes (after creation/selection)
 
   // Get tasks for a specific project
   const getProjectTasks = (projectId: string) => {

@@ -15,7 +15,7 @@ import {
   IconFolder,
 } from '@/components/ui/icons';
 import { SelectionModal } from '@/components/selection-modal';
-import { AGENT_TYPES } from '@/components/model-selector';
+import { ModelSelector, AGENT_TYPES, type ModelSelection } from '@/components/model-selector';
 import { useStore } from '@/lib/store';
 import { cn, generateId } from '@/lib/utils';
 import type { Task, Project, Message } from '@/lib/types';
@@ -374,17 +374,27 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
             </>
           )}
 
-          {/* Agent and model display */}
-          {(() => {
-            const agentType = AGENT_TYPES.find(a => a.id === task.agent) || AGENT_TYPES[0];
-            const model = agentType.models.find(m => m.model === task.model) || agentType.models.find(m => m.isDefault);
-            return (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-bg-surface/80">
-                <span className="text-[15px] font-medium text-text-primary">{agentType.name}</span>
-                <span className="text-[13px] font-medium text-text-secondary">{model?.displayName}</span>
-              </div>
-            );
-          })()}
+          {/* Model selector */}
+          <ModelSelector
+            selection={{
+              agent: task.agent || 'claude',
+              model: task.model || 'opus'
+            }}
+            onSelectionChange={(selection) => {
+              updateTask(task.id, { agent: selection.agent, model: selection.model });
+              // Update localStorage
+              const storageKey = project ? `swarmkit-tasks-${project.id}` : 'swarmkit-tasks-standalone';
+              const stored = localStorage.getItem(storageKey);
+              if (stored) {
+                const tasks = JSON.parse(stored);
+                const idx = tasks.findIndex((t: Task) => t.id === task.id);
+                if (idx !== -1) {
+                  tasks[idx] = { ...tasks[idx], agent: selection.agent, model: selection.model };
+                  localStorage.setItem(storageKey, JSON.stringify(tasks));
+                }
+              }
+            }}
+          />
         </div>
       </header>
 

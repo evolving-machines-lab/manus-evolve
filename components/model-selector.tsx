@@ -118,9 +118,8 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
   }, [isOpen, expandedAgent]);
 
   const handleAgentSelect = (agent: AgentType) => {
-    // Select agent with default model
+    // Select agent with default model, keep popup open
     onSelectionChange({ agent: agent.id, model: agent.defaultModel });
-    setIsOpen(false);
     setExpandedAgent(null);
   };
 

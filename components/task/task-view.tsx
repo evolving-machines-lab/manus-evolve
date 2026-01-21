@@ -526,7 +526,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
           return (
             <div className="flex items-baseline gap-2 px-3 py-2.5 rounded-xl">
               <span className="text-[15px] font-medium text-text-primary">{agentType.name}</span>
-              <span className="text-[12px] font-medium text-text-secondary">{model?.displayName}</span>
+              <span className="text-[13px] font-medium text-text-secondary">{model?.displayName}</span>
             </div>
           );
         })()}

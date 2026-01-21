@@ -31,7 +31,7 @@ export interface Task {
   artifacts: Artifact[];
   integrations?: string[];
   skills?: string[];
-  agent?: string;
+  model?: string;
   sessionId?: string;
   browserUrl?: string;
   createdAt: string;

@@ -4,48 +4,95 @@ import { useState, useRef, useEffect } from 'react';
 import { IconCheck, IconChevronDown } from '@/components/ui/icons';
 import { cn } from '@/lib/utils';
 
-export interface Agent {
+export interface AgentModel {
   id: string;
-  name: string;
+  agent: 'claude' | 'codex' | 'gemini' | 'qwen';
+  model: string;
+  displayName: string;
   description: string;
-  badge?: string;
 }
 
-export const AVAILABLE_AGENTS: Agent[] = [
+export const AVAILABLE_MODELS: AgentModel[] = [
+  // Claude models
   {
-    id: 'claude',
-    name: 'Claude',
-    description: 'Advanced reasoning and analysis',
-    badge: 'Pro',
+    id: 'claude-opus',
+    agent: 'claude',
+    model: 'opus',
+    displayName: 'Claude Opus',
+    description: 'Most capable, complex reasoning',
   },
   {
-    id: 'codex',
-    name: 'Codex',
-    description: 'Specialized for code generation',
-    badge: 'Pro',
+    id: 'claude-sonnet',
+    agent: 'claude',
+    model: 'sonnet',
+    displayName: 'Claude Sonnet',
+    description: 'Balanced performance and speed',
   },
   {
-    id: 'gemini',
-    name: 'Gemini',
-    description: 'Multimodal understanding',
+    id: 'claude-haiku',
+    agent: 'claude',
+    model: 'haiku',
+    displayName: 'Claude Haiku',
+    description: 'Fast and efficient',
+  },
+  // Codex models
+  {
+    id: 'codex-gpt52',
+    agent: 'codex',
+    model: 'gpt-5.2',
+    displayName: 'Codex GPT-5.2',
+    description: 'Advanced code generation',
   },
   {
-    id: 'qwen',
-    name: 'Qwen',
-    description: 'Fast and efficient for everyday tasks',
+    id: 'codex-gpt52-codex',
+    agent: 'codex',
+    model: 'gpt-5.2-codex',
+    displayName: 'Codex Specialized',
+    description: 'Optimized for coding tasks',
+  },
+  // Gemini models
+  {
+    id: 'gemini-pro',
+    agent: 'gemini',
+    model: 'gemini-3-pro-preview',
+    displayName: 'Gemini Pro',
+    description: 'High capability multimodal',
+  },
+  {
+    id: 'gemini-flash',
+    agent: 'gemini',
+    model: 'gemini-3-flash-preview',
+    displayName: 'Gemini Flash',
+    description: 'Fast multimodal processing',
+  },
+  // Qwen models
+  {
+    id: 'qwen-coder',
+    agent: 'qwen',
+    model: 'qwen3-coder-plus',
+    displayName: 'Qwen Coder',
+    description: 'Open-source code specialist',
   },
 ];
 
+// Group models by agent
+const AGENT_GROUPS = [
+  { agent: 'claude', label: 'Claude' },
+  { agent: 'codex', label: 'Codex' },
+  { agent: 'gemini', label: 'Gemini' },
+  { agent: 'qwen', label: 'Qwen' },
+] as const;
+
 interface ModelSelectorProps {
-  selectedAgent: string;
-  onAgentChange: (agentId: string) => void;
+  selectedModel: string;
+  onModelChange: (modelId: string) => void;
 }
 
-export function ModelSelector({ selectedAgent, onAgentChange }: ModelSelectorProps) {
+export function ModelSelector({ selectedModel, onModelChange }: ModelSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const currentAgent = AVAILABLE_AGENTS.find(a => a.id === selectedAgent) || AVAILABLE_AGENTS[0];
+  const currentModel = AVAILABLE_MODELS.find(m => m.id === selectedModel) || AVAILABLE_MODELS[0];
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -82,7 +129,7 @@ export function ModelSelector({ selectedAgent, onAgentChange }: ModelSelectorPro
           isOpen && "bg-bg-overlay"
         )}
       >
-        <span className="text-text-primary">{currentAgent.name}</span>
+        <span className="text-text-primary">{currentModel.displayName}</span>
         <IconChevronDown
           size={16}
           className={cn(
@@ -94,43 +141,48 @@ export function ModelSelector({ selectedAgent, onAgentChange }: ModelSelectorPro
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-[280px] p-2 rounded-xl border border-border-subtle bg-bg-surface shadow-xl z-50">
-          {AVAILABLE_AGENTS.map((agent) => {
-            const isSelected = agent.id === selectedAgent;
+        <div className="absolute top-full left-0 mt-2 w-[260px] py-2 rounded-xl border border-border-subtle bg-bg-surface shadow-xl z-50">
+          {AGENT_GROUPS.map((group) => {
+            const models = AVAILABLE_MODELS.filter(m => m.agent === group.agent);
             return (
-              <button
-                key={agent.id}
-                onClick={() => {
-                  onAgentChange(agent.id);
-                  setIsOpen(false);
-                }}
-                className={cn(
-                  "flex items-start gap-3 w-full p-3 rounded-lg text-left transition-colors",
-                  isSelected ? "bg-bg-overlay" : "hover:bg-bg-overlay"
-                )}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "text-[14px] font-medium",
-                      isSelected ? "text-text-primary" : "text-text-secondary"
-                    )}>
-                      {agent.name}
-                    </span>
-                    {agent.badge && (
-                      <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-accent text-bg-base">
-                        {agent.badge}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[12px] text-text-tertiary mt-0.5">
-                    {agent.description}
-                  </p>
+              <div key={group.agent}>
+                <div className="px-3 py-1.5">
+                  <span className="text-[11px] font-medium text-text-quaternary uppercase tracking-wider">
+                    {group.label}
+                  </span>
                 </div>
-                {isSelected && (
-                  <IconCheck size={18} className="text-text-primary mt-0.5 shrink-0" />
-                )}
-              </button>
+                {models.map((model) => {
+                  const isSelected = model.id === selectedModel;
+                  return (
+                    <button
+                      key={model.id}
+                      onClick={() => {
+                        onModelChange(model.id);
+                        setIsOpen(false);
+                      }}
+                      className={cn(
+                        "flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors",
+                        isSelected ? "bg-bg-overlay" : "hover:bg-bg-overlay"
+                      )}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <span className={cn(
+                          "text-[13px]",
+                          isSelected ? "text-text-primary font-medium" : "text-text-secondary"
+                        )}>
+                          {model.displayName}
+                        </span>
+                        <p className="text-[11px] text-text-tertiary">
+                          {model.description}
+                        </p>
+                      </div>
+                      {isSelected && (
+                        <IconCheck size={16} className="text-text-primary shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             );
           })}
         </div>

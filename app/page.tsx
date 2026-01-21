@@ -19,7 +19,7 @@ export default function HomePage() {
   const [modalTab, setModalTab] = useState<'integrations' | 'skills'>('integrations');
   const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
-  const [selectedAgent, setSelectedAgent] = useState('claude');
+  const [selectedModel, setSelectedModel] = useState('claude-opus');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -57,7 +57,7 @@ export default function HomePage() {
       artifacts: [],
       integrations: selectedIntegrations,
       skills: selectedSkills,
-      agent: selectedAgent,
+      model: selectedModel,
       createdAt: now,
       updatedAt: now,
     };
@@ -114,8 +114,8 @@ export default function HomePage() {
         {/* Model selector - top left */}
         <div className="absolute top-4 left-6">
           <ModelSelector
-            selectedAgent={selectedAgent}
-            onAgentChange={setSelectedAgent}
+            selectedModel={selectedModel}
+            onModelChange={setSelectedModel}
           />
         </div>
 

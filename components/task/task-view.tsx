@@ -337,32 +337,30 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
 
   if (!task) {
     return (
-      <div className="flex-1 flex flex-col bg-bg-base">
-        {/* Header with breadcrumb */}
-        <header className="h-14 px-4 flex items-center">
-          <div className="flex items-center gap-3">
-            {/* Project breadcrumb (only for project tasks) */}
-            {project && (
-              <>
-                <div className="flex items-center gap-2">
-                  <IconFolder size={16} className="text-text-primary" />
-                  <span className="text-[15px] font-medium text-text-primary">
-                    {project.name}
-                  </span>
-                </div>
-                <span className="text-[15px] font-medium text-text-tertiary">/</span>
-              </>
-            )}
+      <div className="flex-1 flex flex-col bg-bg-base relative">
+        {/* Model selector - top left */}
+        <div className="absolute top-4 left-4 flex items-center gap-3">
+          {/* Project breadcrumb (only for project tasks) */}
+          {project && (
+            <>
+              <div className="flex items-center gap-2">
+                <IconFolder size={16} className="text-text-primary" />
+                <span className="text-[15px] font-medium text-text-primary">
+                  {project.name}
+                </span>
+              </div>
+              <span className="text-[15px] font-medium text-text-tertiary">/</span>
+            </>
+          )}
 
-            {/* Model selector */}
-            <ModelSelector
-              selection={modelSelection}
-              onSelectionChange={setModelSelection}
-            />
-          </div>
-        </header>
+          {/* Model selector */}
+          <ModelSelector
+            selection={modelSelection}
+            onSelectionChange={setModelSelection}
+          />
+        </div>
 
-        <div className="flex-1 flex flex-col items-center justify-start pt-[10vh] px-6">
+        <div className="flex-1 flex flex-col items-center justify-start pt-[20vh] px-6">
           <div className="w-full max-w-2xl">
             <h1 className="text-2xl font-medium text-text-primary text-center mb-8">
               What can I help you with?

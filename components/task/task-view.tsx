@@ -267,9 +267,9 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
   const renderInputSection = (onSubmit: () => void, onKeyDown: (e: React.KeyboardEvent) => void, disabled = false, showSelections = true) => (
     <>
       <div className={cn(
-        'rounded-3xl border bg-bg-content-surface p-4 transition-all duration-150',
-        'border-border-subtle',
-        'focus-within:border-border-default'
+        'rounded-3xl border bg-[#2f2f2f] p-4 transition-all duration-150 pointer-events-auto shadow-sm',
+        'border-[#444444]',
+        'focus-within:border-[#555555]'
       )}>
         <textarea
           ref={textareaRef}
@@ -285,14 +285,14 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
           <div className="flex items-center gap-2">
             <button
               onClick={() => onOpenPanel?.('files')}
-              className="w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors"
+              className="w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle border border-[#444444] flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors"
             >
               <IconAttach size={18} />
             </button>
             <button
               onClick={openIntegrationsModal}
               className={cn(
-                "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center transition-colors",
+                "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle border border-[#444444] flex items-center justify-center transition-colors",
                 selectedIntegrations.length > 0 ? "text-accent" : "text-text-tertiary hover:text-text-secondary"
               )}
               title="Select integrations"
@@ -302,7 +302,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
             <button
               onClick={openSkillsModal}
               className={cn(
-                "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle flex items-center justify-center transition-colors",
+                "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle border border-[#444444] flex items-center justify-center transition-colors",
                 selectedSkills.length > 0 ? "text-accent" : "text-text-tertiary hover:text-text-secondary"
               )}
               title="Select skills"
@@ -456,10 +456,13 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
     );
   }
 
+  // Calculate bottom padding based on preview state (needs to be taller than bottom section)
+  const bottomPadding = rightPanelOpen ? 'pb-[140px]' : 'pb-[380px]';
+
   return (
-    <div className="flex-1 flex flex-col h-full bg-bg-content relative">
+    <div className="flex-1 h-full bg-bg-content relative overflow-hidden">
       {/* Model display - top left (fixed header that covers scrolling content) */}
-      <div className="absolute top-0 left-0 right-0 h-14 bg-bg-content z-10 flex items-center px-4 gap-3">
+      <div className="absolute top-0 left-0 right-0 h-14 bg-bg-content z-20 flex items-center px-4 gap-3">
         {/* Project breadcrumb (only for project tasks) */}
         {project && (
           <>
@@ -486,9 +489,9 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
         })()}
       </div>
 
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto pt-14">
-        <div className="max-w-3xl mx-auto px-6 py-6">
+      {/* Messages area - full height, scrolls under bottom section */}
+      <div className="absolute inset-0 overflow-y-auto pt-14">
+        <div className={cn("max-w-3xl mx-auto px-6 py-6", bottomPadding)}>
           {displayMessages.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-text-tertiary text-[14px]">
@@ -551,9 +554,10 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
         </div>
       </div>
 
-      {/* Bottom section - Preview card + Task progress + Input */}
-      <div className="p-4 space-y-4">
-        <div className="max-w-3xl mx-auto space-y-4">
+      {/* Bottom section - Preview card + Task progress + Input (floats over messages) */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 space-y-4 z-10 pointer-events-none">
+        {/* pointer-events-none on container, pointer-events-auto on children */}
+        <div className="max-w-3xl mx-auto space-y-2">
           {/* Preview Cards - Manus style */}
           {!rightPanelOpen && (
             <>
@@ -562,7 +566,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                   {/* Mini terminal - overflows above the bar */}
                   <div
                     onClick={() => onOpenPanel?.('browser')}
-                    className="absolute left-[17px] bottom-[17px] w-[160px] h-[100px] rounded-xl bg-bg-overlay border border-border-subtle overflow-hidden cursor-pointer z-10"
+                    className="absolute left-[17px] bottom-[17px] w-[160px] h-[100px] rounded-xl bg-[#363636] border border-[#4a4a4a] overflow-hidden cursor-pointer z-10 pointer-events-auto shadow-sm"
                   >
                     <div className="h-full flex flex-col items-center justify-center p-2">
                       {isRunning ? (
@@ -580,7 +584,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                   </div>
 
                   {/* Thin progress bar */}
-                  <div className="rounded-2xl border border-border-subtle bg-bg-surface px-4 py-3 pl-[191px]">
+                  <div className="rounded-2xl border border-[#444444] bg-[#2f2f2f] px-4 py-3 pl-[191px] pointer-events-auto shadow-sm">
                     <div className="flex items-center gap-3">
                       <div className="flex-1 flex items-center gap-3">
                         {(() => {
@@ -620,11 +624,11 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                   </div>
                 </div>
               ) : (
-                <div className="rounded-2xl border border-border-subtle bg-bg-surface p-4">
+                <div className="rounded-2xl border border-[#444444] bg-[#2f2f2f] p-4 pointer-events-auto shadow-sm">
                   <div className="flex items-start gap-4">
                     <div
                       onClick={() => onOpenPanel?.('browser')}
-                      className="relative w-[160px] h-[100px] rounded-xl bg-bg-overlay border border-border-subtle overflow-hidden cursor-pointer group flex-shrink-0"
+                      className="relative w-[160px] h-[100px] rounded-xl bg-[#363636] border border-[#4a4a4a] overflow-hidden cursor-pointer group flex-shrink-0 shadow-sm"
                     >
                       <div className="h-full flex flex-col items-center justify-center p-2">
                         {isRunning ? (
@@ -675,7 +679,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                   </div>
 
                   {displayProgress.length > 0 && (
-                    <div className="mt-4 rounded-2xl border border-border-subtle bg-bg-overlay p-5">
+                    <div className="mt-4 rounded-2xl border border-[#444444] bg-[#363636] p-5">
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-[15px] font-medium text-text-primary">Task progress</h3>
                         <span className="text-[13px] text-text-tertiary">{completedSteps} / {totalSteps}</span>

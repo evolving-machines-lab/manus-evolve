@@ -49,7 +49,7 @@ export function RightPanelTabs({ project, task, onClose, defaultTab = 'browser' 
   return (
     <div className="flex-1 h-full flex flex-col bg-bg-content">
       {/* Panel container with rounded corners */}
-      <div className="flex-1 m-3 ml-0 rounded-2xl border border-[#3a3a3a] bg-bg-content-surface overflow-hidden flex flex-col">
+      <div className="flex-1 m-3 ml-0 rounded-2xl border border-[#4a4a4a] bg-[#2f2f2f] overflow-hidden flex flex-col shadow-sm">
         {/* Header with tabs */}
         <div className="border-b border-border-subtle">
           {/* Title row */}
@@ -110,7 +110,7 @@ export function RightPanelTabs({ project, task, onClose, defaultTab = 'browser' 
         {/* Task progress section at bottom */}
         {task && task.progress.length > 0 && (
           <div className="p-4 pt-0">
-            <div className="rounded-2xl border border-border-subtle bg-bg-overlay p-4">
+            <div className="rounded-2xl border border-[#444444] bg-[#363636] p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-[16px] font-medium text-text-primary">Task progress</h3>
                 <span className="text-[13px] text-text-tertiary">

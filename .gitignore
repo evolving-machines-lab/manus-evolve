@@ -33,5 +33,5 @@ yarn-error.log*
 next-env.d.ts
 
 # data
-/data/*.db
+/data/
 /uploads/

@@ -73,6 +73,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
     const userMessage: Message = {
       id: generateId(),
       role: 'user',
+      contentType: 'text',
       content: input.trim(),
       timestamp: new Date().toISOString(),
     };
@@ -84,8 +85,8 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
       title: task.title === 'New Task' ? input.trim().slice(0, 50) : task.title,
       prompt: task.prompt || input.trim(),
       progress: [
-        { id: generateId(), content: 'Analyzing project context', status: 'in_progress' },
-        { id: generateId(), content: 'Processing request', status: 'pending' },
+        { id: generateId(), content: 'Analyzing project context', status: 'in_progress', priority: 'high' },
+        { id: generateId(), content: 'Processing request', status: 'pending', priority: 'medium' },
       ],
     };
 
@@ -128,12 +129,13 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
       messages: [{
         id: generateId(),
         role: 'user',
+        contentType: 'text',
         content: input.trim(),
         timestamp: new Date().toISOString(),
       }],
       progress: [
-        { id: generateId(), content: 'Analyzing request', status: 'in_progress' },
-        { id: generateId(), content: 'Processing', status: 'pending' },
+        { id: generateId(), content: 'Analyzing request', status: 'in_progress', priority: 'high' },
+        { id: generateId(), content: 'Processing', status: 'pending', priority: 'medium' },
       ],
       artifacts: [],
       integrations: selectedIntegrations,

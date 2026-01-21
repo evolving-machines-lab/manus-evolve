@@ -49,9 +49,9 @@ export function createSwarmKit(config: SwarmKitConfig): SwarmKitInstance {
       // Simulate agent starting
       if (options.onProgress) {
         options.onProgress([
-          { id: '1', content: 'Initializing agent', status: 'in_progress' },
-          { id: '2', content: 'Processing request', status: 'pending' },
-          { id: '3', content: 'Generating output', status: 'pending' },
+          { id: '1', content: 'Initializing agent', status: 'in_progress', priority: 'high' },
+          { id: '2', content: 'Processing request', status: 'pending', priority: 'medium' },
+          { id: '3', content: 'Generating output', status: 'pending', priority: 'medium' },
         ]);
       }
 
@@ -69,9 +69,9 @@ export function createSwarmKit(config: SwarmKitConfig): SwarmKitInstance {
 
       if (options.onProgress) {
         options.onProgress([
-          { id: '1', content: 'Initializing agent', status: 'completed' },
-          { id: '2', content: 'Processing request', status: 'in_progress' },
-          { id: '3', content: 'Generating output', status: 'pending' },
+          { id: '1', content: 'Initializing agent', status: 'completed', priority: 'high' },
+          { id: '2', content: 'Processing request', status: 'in_progress', priority: 'medium' },
+          { id: '3', content: 'Generating output', status: 'pending', priority: 'medium' },
         ]);
       }
 
@@ -90,6 +90,7 @@ I'm ready to help you with your task. What would you like me to do?`;
         options.onMessage({
           id: `msg_${Date.now()}`,
           role: 'assistant',
+          contentType: 'text',
           content: responseText,
           timestamp: new Date().toISOString(),
         });
@@ -99,9 +100,9 @@ I'm ready to help you with your task. What would you like me to do?`;
 
       if (options.onProgress) {
         options.onProgress([
-          { id: '1', content: 'Initializing agent', status: 'completed' },
-          { id: '2', content: 'Processing request', status: 'completed' },
-          { id: '3', content: 'Generating output', status: 'completed' },
+          { id: '1', content: 'Initializing agent', status: 'completed', priority: 'high' },
+          { id: '2', content: 'Processing request', status: 'completed', priority: 'medium' },
+          { id: '3', content: 'Generating output', status: 'completed', priority: 'medium' },
         ]);
       }
 

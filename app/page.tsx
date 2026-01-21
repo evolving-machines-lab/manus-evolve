@@ -52,7 +52,7 @@ export default function HomePage() {
       title: input.trim().slice(0, 50),
       status: 'running' as const,
       prompt: input.trim(),
-      messages: [{ id: generateId(), role: 'user' as const, content: input.trim(), timestamp: now }],
+      messages: [{ id: generateId(), role: 'user' as const, contentType: 'text' as const, content: input.trim(), timestamp: now }],
       progress: [],
       artifacts: [],
       integrations: selectedIntegrations,

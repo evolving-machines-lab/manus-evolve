@@ -136,9 +136,23 @@ evolve.on("content", (event: OutputEvent) => {
 |-------|-------------|-----------|
 | `agent_message_chunk` | Text/image from agent | Append to chat |
 | `agent_thought_chunk` | Reasoning/thinking | Show in thinking panel |
+| `user_message_chunk` | User message echo (Gemini) | Show user message |
 | `tool_call` | Tool started | Add to tool list |
 | `tool_call_update` | Tool completed | Update tool status |
 | `plan` | Progress items | Update progress tracker |
+
+### Tool Kind Values
+
+| Kind | Tools | Description |
+|------|-------|-------------|
+| `read` | Read, NotebookRead | Reading files |
+| `edit` | Edit, Write, NotebookEdit | Modifying files |
+| `search` | Glob, Grep, LS | Searching files |
+| `execute` | Bash, BashOutput, KillShell | Running commands |
+| `think` | Task (subagent) | Agent thinking |
+| `fetch` | WebFetch, WebSearch | Web requests |
+| `switch_mode` | ExitPlanMode | Mode changes |
+| `other` | MCP tools, unknown | Everything else |
 
 ---
 
@@ -162,7 +176,7 @@ const files = readLocalDir("./project-folder", true);
 
 #### Initial Upload (with setup)
 ```ts
-// Files upload on first run()
+// Files upload to /home/user/workspace/context/ on first run()
 evolve.withContext({
   "document.pdf": pdfBuffer,
   "data.json": jsonString,
@@ -172,7 +186,7 @@ evolve.withContext({
 
 #### Mid-Conversation Upload
 ```ts
-// Immediate upload to existing sandbox
+// Immediate upload to /home/user/workspace/context/
 await evolve.uploadContext({
   "new-file.pdf": newPdfBuffer,
 });
@@ -188,6 +202,16 @@ const files: FileMap = {
   "reports/q2.pdf": pdfBuffer,
   "config.json": '{"key": "value"}',
 };
+```
+
+### Sandbox Filesystem Structure
+```
+/home/user/workspace/
+├── context/     # Input files (withContext/uploadContext) - user uploads
+├── scripts/     # Agent code
+├── temp/        # Scratch space
+├── output/      # Final deliverables (downloaded via getOutputFiles)
+└── CLAUDE.md    # System prompt (auto-generated from withSystemPrompt)
 ```
 
 ---
@@ -239,13 +263,13 @@ saveLocalDir("./downloads", output.files);
 
 ### SDK Features
 
-Browser-use is included by default. Extract URLs from tool_call_update events:
+Browser-use is included by default with `EVOLVE_API_KEY`. Extract URLs from tool_call_update events:
 
 ```ts
 interface BrowserUseResponse {
-  live_url?: string;           // VNC live view URL
-  screenshot_url?: string;     // Final screenshot
-  steps?: Array<{ screenshot_url?: string }>;
+  live_url?: string;           // VNC live view URL (real-time browser)
+  screenshot_url?: string;     // Final screenshot URL
+  steps?: Array<{ screenshot_url?: string }>;  // Per-step screenshots
 }
 
 // Extraction helper
@@ -253,17 +277,17 @@ function extractBrowserUseUrls(text: string): { liveUrl?: string; screenshotUrl?
   let liveUrl: string | undefined;
   let screenshotUrl: string | undefined;
 
-  // Regex extraction
+  // 1. Regex extraction (fast, handles malformed JSON)
   const liveMatch = text.match(/"live_url"\s*:\s*"([^"]+)"/);
   if (liveMatch) liveUrl = liveMatch[1];
 
   const screenshotMatch = text.match(/"screenshot_url"\s*:\s*"([^"]+)"/);
   if (screenshotMatch) screenshotUrl = screenshotMatch[1];
 
-  // JSON.parse fallback
+  // 2. JSON.parse fallback (for steps[].screenshot_url)
   if (!liveUrl || !screenshotUrl) {
     try {
-      const parsed = JSON.parse(text);
+      const parsed = JSON.parse(text) as BrowserUseResponse;
       if (!liveUrl) liveUrl = parsed.live_url;
       if (!screenshotUrl) screenshotUrl = parsed.screenshot_url ?? parsed.steps?.[0]?.screenshot_url;
     } catch {}
@@ -277,14 +301,27 @@ function extractBrowserUseUrls(text: string): { liveUrl?: string; screenshotUrl?
 ```ts
 // In tool_call_update handler
 const urls = extractBrowserUseUrls(toolContent);
+
 if (urls.liveUrl) {
-  // Show live browser iframe
-  setBrowserUrl(urls.liveUrl);
+  // Show live browser iframe - real-time VNC view
+  setBrowserLiveUrl(urls.liveUrl);
+  // Save to task for reconnection
+  updateTask({ browser_live_url: urls.liveUrl });
 }
+
 if (urls.screenshotUrl) {
   // Show screenshot image
-  setScreenshot(urls.screenshotUrl);
+  setBrowserScreenshotUrl(urls.screenshotUrl);
+  // Save latest screenshot to task
+  updateTask({ browser_screenshot_url: urls.screenshotUrl });
 }
+```
+
+### Database Fields
+```sql
+-- In tasks table
+browser_live_url TEXT,       -- VNC live view URL
+browser_screenshot_url TEXT  -- Latest screenshot URL
 ```
 
 ---
@@ -403,6 +440,20 @@ await evolve.run({ prompt: "Continue" });  // Session intact
 await evolve.kill();  // Destroy sandbox; next run() creates new one
 ```
 
+#### Switch Between Sandboxes
+```ts
+// Save current session
+const sessionA = evolve.getSession();
+
+// Switch to different sandbox
+await evolve.setSession('existing-sandbox-b-id');
+await evolve.run({ prompt: 'Work in sandbox B' });
+
+// Switch back
+await evolve.setSession(sessionA);
+await evolve.run({ prompt: 'Continue in sandbox A' });
+```
+
 ### Task Session Store
 ```ts
 // Server-side session management
@@ -464,51 +515,132 @@ console.log(evolve.getSessionTimestamp());  // Timestamp for log file
 
 ---
 
+## 12. Direct Shell Commands
+
+### SDK Features
+```ts
+// Execute command directly in sandbox (bypasses agent)
+const result = await evolve.executeCommand("pytest", {
+  timeoutMs: 10 * 60 * 1000,  // Optional, default 1 hour
+  background: false,          // Optional
+});
+
+console.log(result.exitCode);
+console.log(result.stdout);
+console.log(result.stderr);
+```
+
+### Response Type
+```ts
+type AgentResponse = {
+  sandboxId: string;
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+};
+```
+
+---
+
+## 13. Port Forwarding
+
+### SDK Features
+```ts
+// Get public URL for a port running in sandbox
+const url = await evolve.getHost(8000);
+console.log(`Service available at ${url}`);
+```
+
+Useful for:
+- Previewing web apps built by agent
+- Accessing services started in sandbox
+
+---
+
+## 14. Secrets Injection
+
+### SDK Features
+```ts
+// Inject environment variables into sandbox
+evolve.withSecrets({
+  GITHUB_TOKEN: process.env.GITHUB_TOKEN,
+  DATABASE_URL: process.env.DATABASE_URL,
+});
+```
+
+Secrets are available as environment variables inside the sandbox.
+
+---
+
 ## Implementation Phases
 
 ### Phase 1: Core Execution
 - [ ] Agent configuration from model selector
 - [ ] `evolve.run()` for task execution
-- [ ] Event streaming to UI (messages, progress)
+- [ ] Event streaming to UI (messages, tool calls, progress)
 - [ ] Basic error handling
 
 ### Phase 2: File Handling
 - [ ] `withContext()` for initial project files
 - [ ] `uploadContext()` for mid-task uploads
 - [ ] `getOutputFiles()` for artifacts
-- [ ] Browser URL extraction
+- [ ] `readLocalDir()` / `saveLocalDir()` helpers
 
-### Phase 3: Integrations
+### Phase 3: Browser Automation
+- [ ] Extract `live_url` from tool_call_update
+- [ ] Extract `screenshot_url` from tool_call_update
+- [ ] Live browser iframe display
+- [ ] Screenshot gallery
+
+### Phase 4: Integrations
 - [ ] `Evolve.composio.auth()` for OAuth
 - [ ] `Evolve.composio.status()` for connection status
+- [ ] `Evolve.composio.connections()` for detailed info
 - [ ] `withComposio()` for task integrations
 
-### Phase 4: Session Management
-- [ ] Save/restore session IDs
+### Phase 5: Session Management
+- [ ] Save session ID to database
 - [ ] `withSession()` for reconnection
+- [ ] `setSession()` for switching sandboxes
 - [ ] `pause()` / `resume()` / `kill()`
 
-### Phase 5: Advanced Features
-- [ ] System prompts per project
-- [ ] Structured output schemas
-- [ ] Observability tags
-- [ ] Skills configuration
+### Phase 6: Advanced Features
+- [ ] System prompts per project (`withSystemPrompt`)
+- [ ] Skills configuration (`withSkills`)
+- [ ] Observability tags (`withSessionTagPrefix`)
+- [ ] Secrets injection (`withSecrets`)
+- [ ] Direct shell commands (`executeCommand`)
+- [ ] Port forwarding (`getHost`)
 
 ---
 
 ## API Routes to Create
 
 ```
-POST /api/tasks              # Create new task
-POST /api/tasks/:id/run      # Run/continue task
-POST /api/tasks/:id/upload   # Upload files mid-task
-GET  /api/tasks/:id/output   # Get output files
-POST /api/tasks/:id/pause    # Pause task
-POST /api/tasks/:id/resume   # Resume task
-DELETE /api/tasks/:id        # Kill task
+# Tasks
+POST   /api/tasks              # Create new task
+GET    /api/tasks/:id          # Get task with messages/progress
+POST   /api/tasks/:id/run      # Run/continue task (streaming SSE)
+POST   /api/tasks/:id/upload   # Upload files mid-task
+GET    /api/tasks/:id/output   # Get output files/artifacts
+POST   /api/tasks/:id/pause    # Pause task sandbox
+POST   /api/tasks/:id/resume   # Resume task sandbox
+DELETE /api/tasks/:id          # Kill task sandbox
 
-GET  /api/integrations/status      # Check all connection statuses
-POST /api/integrations/:toolkit/connect  # Get OAuth URL
+# Projects
+GET    /api/projects           # List user's projects
+POST   /api/projects           # Create project
+GET    /api/projects/:id       # Get project with files
+GET    /api/projects/:id/tasks # List tasks in project
+
+# Integrations (Composio)
+GET    /api/integrations/status           # Check all connection statuses
+POST   /api/integrations/:toolkit/connect # Get OAuth URL
+DELETE /api/integrations/:toolkit         # Disconnect integration
+
+# Files
+POST   /api/files/upload       # Upload file (returns path)
+GET    /api/files/:id          # Download file by ID
 ```
 
 ---

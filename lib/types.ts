@@ -34,7 +34,8 @@ export interface Task {
   agent?: 'claude' | 'codex' | 'gemini' | 'qwen';
   model?: string;
   sessionId?: string;
-  browserUrl?: string;
+  browserLiveUrl?: string;      // VNC live view URL
+  browserScreenshotUrl?: string; // Latest screenshot URL
   createdAt: string;
   updatedAt: string;
 }
@@ -42,23 +43,37 @@ export interface Task {
 export interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
-  content: string;
+  contentType: 'text' | 'image';
+  content: string;  // Text content or base64 image data
+  mimeType?: string; // For images: 'image/png', 'image/jpeg'
   timestamp: string;
   toolCalls?: ToolCall[];
 }
 
+export type ToolKind = 'read' | 'edit' | 'delete' | 'move' | 'search' | 'execute' | 'think' | 'fetch' | 'switch_mode' | 'other';
+
+export interface ToolCallLocation {
+  path: string;
+  line?: number;
+}
+
 export interface ToolCall {
   id: string;
+  toolCallId: string;  // Evolve's toolCallId for updates
   name: string;
+  title?: string;      // Human-readable title
+  kind: ToolKind;
   status: 'pending' | 'in_progress' | 'completed' | 'failed';
   input?: unknown;
   output?: unknown;
+  locations?: ToolCallLocation[];
 }
 
 export interface ProgressItem {
   id: string;
   content: string;
   status: 'pending' | 'in_progress' | 'completed';
+  priority: 'high' | 'medium' | 'low';
 }
 
 export interface Artifact {
@@ -126,25 +141,60 @@ export interface AppState {
   toggleSidebar: () => void;
 }
 
-// SwarmKit event types
-export interface SwarmKitEvent {
+// Evolve SDK event types
+export interface EvolveEvent {
   sessionId?: string;
-  update: {
-    sessionUpdate:
-      | 'agent_message_chunk'
-      | 'agent_thought_chunk'
-      | 'tool_call'
-      | 'tool_call_update'
-      | 'plan';
-    content?: {
-      type: 'text' | 'image';
-      text?: string;
-      data?: string;
-      mimeType?: string;
-    };
-    toolCallId?: string;
-    title?: string;
-    status?: string;
-    entries?: ProgressItem[];
+  update: EvolveSessionUpdate;
+}
+
+export type EvolveSessionUpdate =
+  | EvolveMessageChunk
+  | EvolveToolCall
+  | EvolveToolCallUpdate
+  | EvolvePlan;
+
+export interface EvolveMessageChunk {
+  sessionUpdate: 'agent_message_chunk' | 'agent_thought_chunk' | 'user_message_chunk';
+  content: {
+    type: 'text' | 'image';
+    text?: string;
+    data?: string;      // Base64 for images
+    mimeType?: string;
   };
 }
+
+export interface EvolveToolCall {
+  sessionUpdate: 'tool_call';
+  toolCallId: string;
+  title: string;
+  kind: ToolKind;
+  status: 'pending' | 'in_progress';
+  rawInput?: unknown;
+  content?: EvolveToolCallContent[];
+  locations?: ToolCallLocation[];
+}
+
+export interface EvolveToolCallUpdate {
+  sessionUpdate: 'tool_call_update';
+  toolCallId: string;
+  status?: 'completed' | 'failed';
+  title?: string;
+  content?: EvolveToolCallContent[];
+  locations?: ToolCallLocation[];
+}
+
+export interface EvolvePlan {
+  sessionUpdate: 'plan';
+  entries: Array<{
+    content: string;
+    status: 'pending' | 'in_progress' | 'completed';
+    priority: 'high' | 'medium' | 'low';
+  }>;
+}
+
+export type EvolveToolCallContent =
+  | { type: 'content'; content: { type: 'text' | 'image'; text?: string; data?: string; mimeType?: string } }
+  | { type: 'diff'; path: string; oldText: string | null; newText: string };
+
+// Legacy alias for backwards compatibility
+export type SwarmKitEvent = EvolveEvent;

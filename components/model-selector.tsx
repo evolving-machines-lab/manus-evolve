@@ -10,16 +10,18 @@ export interface AgentModel {
   model: string;
   displayName: string;
   description: string;
+  isDefault?: boolean;
 }
 
 export const AVAILABLE_MODELS: AgentModel[] = [
-  // Claude models
+  // Claude models (default: opus)
   {
     id: 'claude-opus',
     agent: 'claude',
     model: 'opus',
     displayName: 'Claude Opus',
     description: 'Most capable, complex reasoning',
+    isDefault: true,
   },
   {
     id: 'claude-sonnet',
@@ -35,43 +37,88 @@ export const AVAILABLE_MODELS: AgentModel[] = [
     displayName: 'Claude Haiku',
     description: 'Fast and efficient',
   },
-  // Codex models
+  // Codex models (default: gpt-5.2)
   {
-    id: 'codex-gpt52',
+    id: 'codex-gpt-5.2',
     agent: 'codex',
     model: 'gpt-5.2',
-    displayName: 'Codex GPT-5.2',
-    description: 'Advanced code generation',
+    displayName: 'Codex gpt-5.2',
+    description: 'Latest general model',
+    isDefault: true,
   },
   {
-    id: 'codex-gpt52-codex',
+    id: 'codex-gpt-5.2-codex',
     agent: 'codex',
     model: 'gpt-5.2-codex',
-    displayName: 'Codex Specialized',
+    displayName: 'Codex gpt-5.2-codex',
     description: 'Optimized for coding tasks',
   },
-  // Gemini models
   {
-    id: 'gemini-pro',
+    id: 'codex-gpt-5.1-codex-max',
+    agent: 'codex',
+    model: 'gpt-5.1-codex-max',
+    displayName: 'Codex gpt-5.1-codex-max',
+    description: 'Maximum code capability',
+  },
+  {
+    id: 'codex-gpt-5.1-mini',
+    agent: 'codex',
+    model: 'gpt-5.1-mini',
+    displayName: 'Codex gpt-5.1-mini',
+    description: 'Lightweight and fast',
+  },
+  // Gemini models (default: gemini-3-flash-preview)
+  {
+    id: 'gemini-3-pro-preview',
     agent: 'gemini',
     model: 'gemini-3-pro-preview',
-    displayName: 'Gemini Pro',
+    displayName: 'Gemini 3 Pro',
     description: 'High capability multimodal',
   },
   {
-    id: 'gemini-flash',
+    id: 'gemini-3-flash-preview',
     agent: 'gemini',
     model: 'gemini-3-flash-preview',
-    displayName: 'Gemini Flash',
+    displayName: 'Gemini 3 Flash',
     description: 'Fast multimodal processing',
+    isDefault: true,
   },
-  // Qwen models
   {
-    id: 'qwen-coder',
+    id: 'gemini-2.5-pro',
+    agent: 'gemini',
+    model: 'gemini-2.5-pro',
+    displayName: 'Gemini 2.5 Pro',
+    description: 'Stable pro model',
+  },
+  {
+    id: 'gemini-2.5-flash',
+    agent: 'gemini',
+    model: 'gemini-2.5-flash',
+    displayName: 'Gemini 2.5 Flash',
+    description: 'Stable fast model',
+  },
+  {
+    id: 'gemini-2.5-flash-lite',
+    agent: 'gemini',
+    model: 'gemini-2.5-flash-lite',
+    displayName: 'Gemini 2.5 Flash Lite',
+    description: 'Lightweight multimodal',
+  },
+  // Qwen models (default: qwen3-coder-plus)
+  {
+    id: 'qwen-qwen3-coder-plus',
     agent: 'qwen',
     model: 'qwen3-coder-plus',
-    displayName: 'Qwen Coder',
-    description: 'Open-source code specialist',
+    displayName: 'Qwen3 Coder Plus',
+    description: 'Code specialist',
+    isDefault: true,
+  },
+  {
+    id: 'qwen-qwen3-vl-plus',
+    agent: 'qwen',
+    model: 'qwen3-vl-plus',
+    displayName: 'Qwen3 VL Plus',
+    description: 'Vision-language model',
   },
 ];
 
@@ -141,12 +188,12 @@ export function ModelSelector({ selectedModel, onModelChange }: ModelSelectorPro
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-[260px] py-2 rounded-xl border border-border-subtle bg-bg-surface shadow-xl z-50">
+        <div className="absolute top-full left-0 mt-2 w-[280px] py-2 rounded-xl border border-border-subtle bg-bg-surface shadow-xl z-50 max-h-[400px] overflow-y-auto">
           {AGENT_GROUPS.map((group) => {
             const models = AVAILABLE_MODELS.filter(m => m.agent === group.agent);
             return (
               <div key={group.agent}>
-                <div className="px-3 py-1.5">
+                <div className="px-3 py-1.5 sticky top-0 bg-bg-surface">
                   <span className="text-[11px] font-medium text-text-quaternary uppercase tracking-wider">
                     {group.label}
                   </span>
@@ -166,12 +213,19 @@ export function ModelSelector({ selectedModel, onModelChange }: ModelSelectorPro
                       )}
                     >
                       <div className="flex-1 min-w-0">
-                        <span className={cn(
-                          "text-[13px]",
-                          isSelected ? "text-text-primary font-medium" : "text-text-secondary"
-                        )}>
-                          {model.displayName}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={cn(
+                            "text-[13px]",
+                            isSelected ? "text-text-primary font-medium" : "text-text-secondary"
+                          )}>
+                            {model.displayName}
+                          </span>
+                          {model.isDefault && (
+                            <span className="px-1.5 py-0.5 text-[9px] font-medium rounded bg-text-quaternary/20 text-text-tertiary">
+                              default
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[11px] text-text-tertiary">
                           {model.description}
                         </p>

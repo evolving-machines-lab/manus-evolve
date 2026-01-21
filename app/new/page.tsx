@@ -236,7 +236,7 @@ export default function NewProjectPage() {
 
             {/* Step: Files */}
             {step === 'files' && (
-              <div className="animate-slide-up">
+              <div>
                 <div className="mb-6">
                   <h2 className="text-lg font-semibold text-text-primary mb-1">Upload context files</h2>
                   <p className="text-[13px] text-text-secondary">
@@ -276,9 +276,7 @@ export default function NewProjectPage() {
                     {files.map((file, index) => (
                       <div
                         key={file.id}
-                        className="flex items-center gap-3 p-3 bg-bg-surface rounded-lg border border-border-subtle
-                          animate-slide-up"
-                        style={{ animationDelay: `${index * 50}ms` }}
+                        className="flex items-center gap-3 p-3 bg-bg-surface rounded-lg border border-border-subtle"
                       >
                         <div className="w-9 h-9 rounded-lg bg-bg-overlay flex items-center justify-center">
                           <IconFile size={18} className="text-text-tertiary" />
@@ -305,7 +303,7 @@ export default function NewProjectPage() {
 
             {/* Step: Integrations */}
             {step === 'integrations' && (
-              <div className="animate-slide-up">
+              <div>
                 <div className="mb-6">
                   <h2 className="text-lg font-semibold text-text-primary mb-1">Select integrations</h2>
                   <p className="text-[13px] text-text-secondary">
@@ -346,12 +344,10 @@ export default function NewProjectPage() {
                         onClick={() => toggleIntegration(integration.id)}
                         className={cn(
                           'group flex items-center gap-3 p-4 rounded-xl text-left transition-all duration-150',
-                          'animate-slide-up',
                           isSelected
                             ? 'bg-accent-subtle border border-accent/50'
                             : 'bg-bg-surface hover:bg-bg-overlay'
                         )}
-                        style={{ animationDelay: `${index * 30}ms` }}
                       >
                         <div
                           className={cn(
@@ -399,7 +395,7 @@ export default function NewProjectPage() {
 
             {/* Step: Skills */}
             {step === 'skills' && (
-              <div className="animate-slide-up">
+              <div>
                 <div className="mb-6">
                   <h2 className="text-lg font-semibold text-text-primary mb-1">Select agent skills</h2>
                   <p className="text-[13px] text-text-secondary">
@@ -435,8 +431,7 @@ export default function NewProjectPage() {
                   return (
                     <div
                       key={category.id}
-                      className="mb-8 animate-slide-up"
-                      style={{ animationDelay: `${catIndex * 50}ms` }}
+                      className="mb-8"
                     >
                       <h3 className="text-2xs font-medium text-text-tertiary uppercase tracking-wider mb-3 px-1">
                         {category.name}

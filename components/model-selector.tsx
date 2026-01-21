@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { IconCheck, IconChevronDown, IconChevronRight } from '@/components/ui/icons';
+import { IconCheck, IconChevronDown } from '@/components/ui/icons';
 import { cn } from '@/lib/utils';
 
 export interface AgentType {
   id: 'claude' | 'codex' | 'gemini' | 'qwen';
   name: string;
-  description: string;
+  provider: string;
   defaultModel: string;
   models: AgentModel[];
 }
@@ -24,47 +24,47 @@ export const AGENT_TYPES: AgentType[] = [
   {
     id: 'claude',
     name: 'Claude',
-    description: 'Anthropic',
+    provider: 'Anthropic',
     defaultModel: 'opus',
     models: [
-      { id: 'opus', model: 'opus', displayName: 'Opus', description: 'Most capable, complex reasoning', isDefault: true },
-      { id: 'sonnet', model: 'sonnet', displayName: 'Sonnet', description: 'Balanced performance and speed' },
-      { id: 'haiku', model: 'haiku', displayName: 'Haiku', description: 'Fast and efficient' },
+      { id: 'opus', model: 'opus', displayName: 'Opus', description: 'Most capable', isDefault: true },
+      { id: 'sonnet', model: 'sonnet', displayName: 'Sonnet', description: 'Balanced' },
+      { id: 'haiku', model: 'haiku', displayName: 'Haiku', description: 'Fast' },
     ],
   },
   {
     id: 'codex',
     name: 'Codex',
-    description: 'OpenAI',
+    provider: 'OpenAI',
     defaultModel: 'gpt-5.2',
     models: [
-      { id: 'gpt-5.2', model: 'gpt-5.2', displayName: 'gpt-5.2', description: 'Latest general model', isDefault: true },
-      { id: 'gpt-5.2-codex', model: 'gpt-5.2-codex', displayName: 'gpt-5.2-codex', description: 'Optimized for coding' },
-      { id: 'gpt-5.1-codex-max', model: 'gpt-5.1-codex-max', displayName: 'gpt-5.1-codex-max', description: 'Maximum capability' },
-      { id: 'gpt-5.1-mini', model: 'gpt-5.1-mini', displayName: 'gpt-5.1-mini', description: 'Lightweight and fast' },
+      { id: 'gpt-5.2', model: 'gpt-5.2', displayName: 'GPT-5.2', description: 'Latest', isDefault: true },
+      { id: 'gpt-5.2-codex', model: 'gpt-5.2-codex', displayName: 'GPT-5.2 Codex', description: 'Code optimized' },
+      { id: 'gpt-5.1-codex-max', model: 'gpt-5.1-codex-max', displayName: 'GPT-5.1 Max', description: 'Maximum capability' },
+      { id: 'gpt-5.1-mini', model: 'gpt-5.1-mini', displayName: 'GPT-5.1 Mini', description: 'Lightweight' },
     ],
   },
   {
     id: 'gemini',
     name: 'Gemini',
-    description: 'Google',
+    provider: 'Google',
     defaultModel: 'gemini-3-flash-preview',
     models: [
-      { id: 'gemini-3-pro-preview', model: 'gemini-3-pro-preview', displayName: 'Gemini 3 Pro', description: 'High capability multimodal' },
-      { id: 'gemini-3-flash-preview', model: 'gemini-3-flash-preview', displayName: 'Gemini 3 Flash', description: 'Fast multimodal', isDefault: true },
-      { id: 'gemini-2.5-pro', model: 'gemini-2.5-pro', displayName: 'Gemini 2.5 Pro', description: 'Stable pro model' },
-      { id: 'gemini-2.5-flash', model: 'gemini-2.5-flash', displayName: 'Gemini 2.5 Flash', description: 'Stable fast model' },
-      { id: 'gemini-2.5-flash-lite', model: 'gemini-2.5-flash-lite', displayName: 'Gemini 2.5 Flash Lite', description: 'Lightweight' },
+      { id: 'gemini-3-pro-preview', model: 'gemini-3-pro-preview', displayName: 'Gemini 3 Pro', description: 'Most capable' },
+      { id: 'gemini-3-flash-preview', model: 'gemini-3-flash-preview', displayName: 'Gemini 3 Flash', description: 'Fast', isDefault: true },
+      { id: 'gemini-2.5-pro', model: 'gemini-2.5-pro', displayName: 'Gemini 2.5 Pro', description: 'Stable' },
+      { id: 'gemini-2.5-flash', model: 'gemini-2.5-flash', displayName: 'Gemini 2.5 Flash', description: 'Stable fast' },
+      { id: 'gemini-2.5-flash-lite', model: 'gemini-2.5-flash-lite', displayName: 'Gemini 2.5 Lite', description: 'Lightweight' },
     ],
   },
   {
     id: 'qwen',
     name: 'Qwen',
-    description: 'Alibaba',
+    provider: 'Alibaba',
     defaultModel: 'qwen3-coder-plus',
     models: [
-      { id: 'qwen3-coder-plus', model: 'qwen3-coder-plus', displayName: 'Qwen3 Coder Plus', description: 'Code specialist', isDefault: true },
-      { id: 'qwen3-vl-plus', model: 'qwen3-vl-plus', displayName: 'Qwen3 VL Plus', description: 'Vision-language model' },
+      { id: 'qwen3-coder-plus', model: 'qwen3-coder-plus', displayName: 'Qwen3 Coder', description: 'Code specialist', isDefault: true },
+      { id: 'qwen3-vl-plus', model: 'qwen3-vl-plus', displayName: 'Qwen3 VL', description: 'Vision-language' },
     ],
   },
 ];
@@ -104,21 +104,29 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setIsOpen(false);
-        setExpandedAgent(null);
+        if (expandedAgent) {
+          setExpandedAgent(null);
+        } else {
+          setIsOpen(false);
+        }
       }
     };
     if (isOpen) {
       document.addEventListener('keydown', handleKeyDown);
     }
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
+  }, [isOpen, expandedAgent]);
 
-  const handleAgentSelect = (agent: AgentType) => {
-    // Select agent with its default model
-    onSelectionChange({ agent: agent.id, model: agent.defaultModel });
-    setIsOpen(false);
-    setExpandedAgent(null);
+  const handleAgentClick = (agent: AgentType) => {
+    if (expandedAgent === agent.id) {
+      // Already expanded, select default and close
+      onSelectionChange({ agent: agent.id, model: agent.defaultModel });
+      setIsOpen(false);
+      setExpandedAgent(null);
+    } else {
+      // Expand to show models
+      setExpandedAgent(agent.id);
+    }
   };
 
   const handleModelSelect = (agent: AgentType, model: AgentModel) => {
@@ -129,17 +137,21 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
 
   const displayName = isDefaultModel
     ? currentAgent.name
-    : `${currentAgent.name} ${currentModel?.displayName || ''}`;
+    : `${currentAgent.name} · ${currentModel?.displayName || ''}`;
 
   return (
     <div ref={dropdownRef} className="relative">
       {/* Trigger button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) setExpandedAgent(null);
+        }}
         className={cn(
-          "flex items-center gap-2 px-3 py-2 rounded-xl text-[14px] font-medium transition-colors",
-          "bg-bg-surface hover:bg-bg-overlay border border-border-subtle",
-          isOpen && "bg-bg-overlay"
+          "flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[15px] font-medium transition-all duration-200",
+          "bg-bg-surface/80 backdrop-blur-sm hover:bg-bg-overlay border border-white/[0.06]",
+          "shadow-[0_2px_8px_rgba(0,0,0,0.12)]",
+          isOpen && "bg-bg-overlay border-white/[0.1]"
         )}
       >
         <span className="text-text-primary">{displayName}</span>
@@ -154,96 +166,110 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-[240px] py-1.5 rounded-xl border border-border-subtle bg-bg-surface shadow-xl z-50">
-          {AGENT_TYPES.map((agent) => {
-            const isSelected = agent.id === selection.agent;
-            const isExpanded = expandedAgent === agent.id;
+        <div
+          className={cn(
+            "absolute top-full left-0 mt-2 rounded-2xl border border-white/[0.08] bg-[#1a1a1a] shadow-2xl z-50 overflow-hidden",
+            "transition-all duration-200",
+            expandedAgent ? "w-[320px]" : "w-[220px]"
+          )}
+        >
+          <div className="p-2">
+            {AGENT_TYPES.map((agent) => {
+              const isSelected = agent.id === selection.agent;
+              const isExpanded = expandedAgent === agent.id;
 
-            return (
-              <div key={agent.id}>
-                {/* Agent row */}
-                <div className="flex items-center">
+              return (
+                <div key={agent.id} className="mb-0.5 last:mb-0">
+                  {/* Agent row */}
                   <button
-                    onClick={() => handleAgentSelect(agent)}
+                    onClick={() => handleAgentClick(agent)}
                     className={cn(
-                      "flex-1 flex items-center gap-3 px-3 py-2.5 text-left transition-colors",
-                      isSelected && !isExpanded ? "bg-bg-overlay" : "hover:bg-bg-overlay"
+                      "flex items-center w-full px-3 py-3 rounded-xl text-left transition-all duration-150",
+                      isExpanded
+                        ? "bg-white/[0.08]"
+                        : isSelected
+                          ? "bg-white/[0.05]"
+                          : "hover:bg-white/[0.05]"
                     )}
                   >
                     <div className="flex-1 min-w-0">
-                      <span className={cn(
-                        "text-[13px]",
-                        isSelected ? "text-text-primary font-medium" : "text-text-secondary"
-                      )}>
-                        {agent.name}
-                      </span>
-                      <p className="text-[11px] text-text-tertiary">
-                        {agent.description}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "text-[14px] font-medium",
+                          isSelected ? "text-white" : "text-text-secondary"
+                        )}>
+                          {agent.name}
+                        </span>
+                        <span className="text-[11px] text-text-quaternary">
+                          {agent.provider}
+                        </span>
+                      </div>
                     </div>
-                    {isSelected && !isExpanded && (
-                      <IconCheck size={16} className="text-text-primary shrink-0" />
-                    )}
-                  </button>
 
-                  {/* Expand button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setExpandedAgent(isExpanded ? null : agent.id);
-                    }}
-                    className="p-2 mr-1 text-text-tertiary hover:text-text-secondary hover:bg-bg-overlay rounded-lg transition-colors"
-                  >
-                    <IconChevronRight
+                    {isSelected && !isExpanded && (
+                      <IconCheck size={16} className="text-accent shrink-0" />
+                    )}
+
+                    <IconChevronDown
                       size={14}
-                      className={cn("transition-transform duration-200", isExpanded && "rotate-90")}
+                      className={cn(
+                        "text-text-quaternary ml-2 transition-transform duration-200",
+                        isExpanded && "rotate-180"
+                      )}
                     />
                   </button>
-                </div>
 
-                {/* Model submenu */}
-                {isExpanded && (
-                  <div className="ml-3 mr-1 mb-1 py-1 border-l border-border-subtle">
-                    {agent.models.map((model) => {
-                      const isModelSelected = isSelected && selection.model === model.model;
-                      return (
-                        <button
-                          key={model.id}
-                          onClick={() => handleModelSelect(agent, model)}
-                          className={cn(
-                            "flex items-center gap-2 w-full pl-3 pr-2 py-2 text-left transition-colors rounded-r-lg",
-                            isModelSelected ? "bg-bg-overlay" : "hover:bg-bg-overlay"
-                          )}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className={cn(
-                                "text-[12px]",
-                                isModelSelected ? "text-text-primary font-medium" : "text-text-secondary"
-                              )}>
-                                {model.displayName}
-                              </span>
-                              {model.isDefault && (
-                                <span className="px-1 py-0.5 text-[8px] font-medium rounded bg-text-quaternary/20 text-text-quaternary">
-                                  default
-                                </span>
+                  {/* Models dropdown */}
+                  <div className={cn(
+                    "grid transition-all duration-200 ease-out",
+                    isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                  )}>
+                    <div className="overflow-hidden">
+                      <div className="pt-1 pb-1 pl-3">
+                        {agent.models.map((model) => {
+                          const isModelSelected = isSelected && selection.model === model.model;
+                          return (
+                            <button
+                              key={model.id}
+                              onClick={() => handleModelSelect(agent, model)}
+                              className={cn(
+                                "flex items-center w-full px-3 py-2.5 rounded-lg text-left transition-all duration-150",
+                                isModelSelected
+                                  ? "bg-accent/10"
+                                  : "hover:bg-white/[0.04]"
                               )}
-                            </div>
-                            <p className="text-[10px] text-text-tertiary truncate">
-                              {model.description}
-                            </p>
-                          </div>
-                          {isModelSelected && (
-                            <IconCheck size={14} className="text-text-primary shrink-0" />
-                          )}
-                        </button>
-                      );
-                    })}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className={cn(
+                                    "text-[13px]",
+                                    isModelSelected ? "text-white font-medium" : "text-text-secondary"
+                                  )}>
+                                    {model.displayName}
+                                  </span>
+                                  {model.isDefault && (
+                                    <span className="px-1.5 py-0.5 text-[9px] font-medium rounded-md bg-white/[0.08] text-text-tertiary">
+                                      default
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-text-quaternary mt-0.5">
+                                  {model.description}
+                                </p>
+                              </div>
+                              {isModelSelected && (
+                                <IconCheck size={14} className="text-accent shrink-0 ml-2" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

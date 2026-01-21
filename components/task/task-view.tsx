@@ -447,7 +447,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
     return (
       <div className="flex-1 flex flex-col bg-bg-content relative">
         {/* Model selector - top left */}
-        <div className="absolute top-4 left-4 flex items-center gap-3">
+        <div className="absolute top-0 left-0 right-0 h-14 flex items-center px-4 gap-3">
           {/* Project breadcrumb (only for project tasks) */}
           {project && (
             <>

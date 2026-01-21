@@ -35,6 +35,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
   const [previewCollapsed, setPreviewCollapsed] = useState(false);
   const [showSelectionModal, setShowSelectionModal] = useState(false);
   const [modalTab, setModalTab] = useState<'integrations' | 'skills'>('integrations');
+  const [modelSelection, setModelSelection] = useState<ModelSelection>({ agent: 'claude', model: 'opus' });
 
   // Initialize with project defaults
   const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>(
@@ -137,6 +138,8 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
       artifacts: [],
       integrations: selectedIntegrations,
       skills: selectedSkills,
+      agent: modelSelection.agent,
+      model: modelSelection.model,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -334,13 +337,39 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
 
   if (!task) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-start pt-[15vh] bg-bg-base px-6">
-        <div className="w-full max-w-2xl">
-          <h1 className="text-2xl font-medium text-text-primary text-center mb-8">
-            What can I help you with?
-          </h1>
+      <div className="flex-1 flex flex-col bg-bg-base">
+        {/* Header with breadcrumb */}
+        <header className="h-14 px-4 flex items-center">
+          <div className="flex items-center gap-3">
+            {/* Project breadcrumb (only for project tasks) */}
+            {project && (
+              <>
+                <div className="flex items-center gap-2">
+                  <IconFolder size={16} className="text-text-primary" />
+                  <span className="text-[15px] font-medium text-text-primary">
+                    {project.name}
+                  </span>
+                </div>
+                <span className="text-[15px] font-medium text-text-tertiary">/</span>
+              </>
+            )}
 
-          {renderInputSection(handleCreateTask, handleEmptyKeyDown)}
+            {/* Model selector */}
+            <ModelSelector
+              selection={modelSelection}
+              onSelectionChange={setModelSelection}
+            />
+          </div>
+        </header>
+
+        <div className="flex-1 flex flex-col items-center justify-start pt-[10vh] px-6">
+          <div className="w-full max-w-2xl">
+            <h1 className="text-2xl font-medium text-text-primary text-center mb-8">
+              What can I help you with?
+            </h1>
+
+            {renderInputSection(handleCreateTask, handleEmptyKeyDown)}
+          </div>
         </div>
 
         <SelectionModal

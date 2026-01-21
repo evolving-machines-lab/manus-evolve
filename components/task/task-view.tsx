@@ -524,9 +524,11 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
           const agentType = AGENT_TYPES.find(a => a.id === task.agent) || AGENT_TYPES[0];
           const model = agentType.models.find(m => m.model === task.model) || agentType.models.find(m => m.isDefault);
           return (
-            <div className="flex items-baseline gap-2 px-3 py-2.5 rounded-xl">
-              <span className="text-[15px] font-medium text-text-primary">{agentType.name}</span>
-              <span className="text-[13px] font-medium text-text-secondary">{model?.displayName}</span>
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
+              <div className="flex items-baseline gap-2">
+                <span className="text-[15px] font-medium text-text-primary">{agentType.name}</span>
+                <span className="text-[13px] font-medium text-text-secondary">{model?.displayName}</span>
+              </div>
             </div>
           );
         })()}

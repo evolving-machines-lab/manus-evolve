@@ -788,6 +788,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
         onIntegrationsChange={setSelectedIntegrations}
         onSkillsChange={setSelectedSkills}
         initialTab={modalTab}
+        readOnly={!!task}
       />
     </div>
   );

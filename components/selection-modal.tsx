@@ -17,6 +17,7 @@ interface SelectionModalProps {
   onIntegrationsChange: (ids: string[]) => void;
   onSkillsChange: (ids: string[]) => void;
   initialTab?: Tab;
+  readOnly?: boolean;
 }
 
 export function SelectionModal({
@@ -27,6 +28,7 @@ export function SelectionModal({
   onIntegrationsChange,
   onSkillsChange,
   initialTab = 'integrations',
+  readOnly = false,
 }: SelectionModalProps) {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [search, setSearch] = useState('');
@@ -54,6 +56,7 @@ export function SelectionModal({
   }, [isOpen, onClose]);
 
   const toggleIntegration = (id: string) => {
+    if (readOnly) return;
     if (selectedIntegrations.includes(id)) {
       onIntegrationsChange(selectedIntegrations.filter(i => i !== id));
     } else {
@@ -62,6 +65,7 @@ export function SelectionModal({
   };
 
   const toggleSkill = (id: string) => {
+    if (readOnly) return;
     if (selectedSkills.includes(id)) {
       onSkillsChange(selectedSkills.filter(s => s !== id));
     } else {
@@ -177,20 +181,23 @@ export function SelectionModal({
                 const isConnected = integrations.find(i => i.id === integration.id)?.connected;
 
                 return (
-                  <button
+                  <div
                     key={integration.id}
                     onClick={() => toggleIntegration(integration.id)}
                     className={cn(
                       'group flex items-center gap-3 p-4 rounded-xl text-left transition-all duration-150',
                       isSelected
                         ? 'bg-accent-subtle border border-accent/50'
-                        : 'bg-bg-surface hover:bg-[#2a2a2a]'
+                        : 'bg-bg-surface',
+                      !readOnly && !isSelected && 'hover:bg-[#2a2a2a] cursor-pointer',
+                      readOnly && 'cursor-default'
                     )}
                   >
                     <div
                       className={cn(
                         'w-10 h-10 rounded-lg flex items-center justify-center transition-colors',
-                        isSelected ? 'bg-accent-muted' : 'bg-bg-overlay group-hover:bg-bg-subtle'
+                        isSelected ? 'bg-accent-muted' : 'bg-bg-overlay',
+                        !readOnly && !isSelected && 'group-hover:bg-bg-subtle'
                       )}
                     >
                       <IconPlug
@@ -202,7 +209,8 @@ export function SelectionModal({
                       <div className="flex items-baseline gap-2">
                         <p className={cn(
                           'text-[13px] font-medium',
-                          isSelected ? 'text-text-primary' : 'text-text-secondary group-hover:text-text-primary'
+                          isSelected ? 'text-text-primary' : 'text-text-secondary',
+                          !readOnly && !isSelected && 'group-hover:text-text-primary'
                         )}>
                           {integration.displayName}
                         </p>
@@ -216,15 +224,17 @@ export function SelectionModal({
                         {integration.description}
                       </p>
                     </div>
-                    <div className={cn(
-                      'w-5 h-5 rounded-md border flex items-center justify-center transition-all',
-                      isSelected
-                        ? 'bg-accent border-accent'
-                        : 'border-border-default group-hover:border-border-emphasis'
-                    )}>
-                      {isSelected && <IconCheck size={12} className="text-bg-base" />}
-                    </div>
-                  </button>
+                    {!readOnly && (
+                      <div className={cn(
+                        'w-5 h-5 rounded-md border flex items-center justify-center transition-all',
+                        isSelected
+                          ? 'bg-accent border-accent'
+                          : 'border-border-default group-hover:border-border-emphasis'
+                      )}>
+                        {isSelected && <IconCheck size={12} className="text-bg-base" />}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -240,20 +250,23 @@ export function SelectionModal({
                       const isSelected = selectedSkills.includes(skill.id);
 
                       return (
-                        <button
+                        <div
                           key={skill.id}
                           onClick={() => toggleSkill(skill.id)}
                           className={cn(
                             'group flex items-center gap-3 p-4 rounded-xl text-left transition-all duration-150',
                             isSelected
                               ? 'bg-accent-subtle border border-accent/50'
-                              : 'bg-bg-surface hover:bg-[#2a2a2a]'
+                              : 'bg-bg-surface',
+                            !readOnly && !isSelected && 'hover:bg-[#2a2a2a] cursor-pointer',
+                            readOnly && 'cursor-default'
                           )}
                         >
                           <div
                             className={cn(
                               'w-10 h-10 rounded-lg flex items-center justify-center transition-colors',
-                              isSelected ? 'bg-accent-muted' : 'bg-bg-overlay group-hover:bg-bg-subtle'
+                              isSelected ? 'bg-accent-muted' : 'bg-bg-overlay',
+                              !readOnly && !isSelected && 'group-hover:bg-bg-subtle'
                             )}
                           >
                             <IconSkill
@@ -264,7 +277,8 @@ export function SelectionModal({
                           <div className="flex-1 min-w-0">
                             <p className={cn(
                               'text-[13px] font-medium',
-                              isSelected ? 'text-text-primary' : 'text-text-secondary group-hover:text-text-primary'
+                              isSelected ? 'text-text-primary' : 'text-text-secondary',
+                              !readOnly && !isSelected && 'group-hover:text-text-primary'
                             )}>
                               {skill.displayName}
                             </p>
@@ -272,15 +286,17 @@ export function SelectionModal({
                               {skill.description}
                             </p>
                           </div>
-                          <div className={cn(
-                            'w-5 h-5 rounded-md border flex items-center justify-center transition-all',
-                            isSelected
-                              ? 'bg-accent border-accent'
-                              : 'border-border-default group-hover:border-border-emphasis'
-                          )}>
-                            {isSelected && <IconCheck size={12} className="text-bg-base" />}
-                          </div>
-                        </button>
+                          {!readOnly && (
+                            <div className={cn(
+                              'w-5 h-5 rounded-md border flex items-center justify-center transition-all',
+                              isSelected
+                                ? 'bg-accent border-accent'
+                                : 'border-border-default group-hover:border-border-emphasis'
+                            )}>
+                              {isSelected && <IconCheck size={12} className="text-bg-base" />}
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
@@ -305,15 +321,21 @@ export function SelectionModal({
         {/* Footer */}
         <div className="px-5 py-4 border-t border-border-subtle flex items-center justify-between">
           <p className="text-[13px] text-text-tertiary">
-            <span className="text-text-secondary">{selectedIntegrations.length}</span> integrations
-            <span className="text-text-quaternary mx-2">·</span>
-            <span className="text-text-secondary">{selectedSkills.length}</span> skills selected
+            {readOnly ? (
+              <span className="text-text-quaternary">View only · Cannot modify after task creation</span>
+            ) : (
+              <>
+                <span className="text-text-secondary">{selectedIntegrations.length}</span> integrations
+                <span className="text-text-quaternary mx-2">·</span>
+                <span className="text-text-secondary">{selectedSkills.length}</span> skills selected
+              </>
+            )}
           </p>
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg text-[13px] font-medium bg-accent hover:bg-accent-hover text-bg-base transition-all"
           >
-            Done
+            {readOnly ? 'Close' : 'Done'}
           </button>
         </div>
       </div>

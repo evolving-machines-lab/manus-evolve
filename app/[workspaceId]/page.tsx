@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Sidebar } from '@/components/workspace/sidebar';
 import { TaskView } from '@/components/task/task-view';
 import { RightPanelTabs } from '@/components/workspace/right-panel-tabs';
 import { IconSpinner } from '@/components/ui/icons';
@@ -77,7 +76,7 @@ export default function ProjectPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-bg-base">
+      <div className="flex-1 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <IconSpinner size={24} className="text-accent" />
           <span className="text-[13px] text-text-tertiary">Loading project...</span>
@@ -91,32 +90,28 @@ export default function ProjectPage() {
   }
 
   return (
-    <div className="flex h-screen bg-bg-base">
-      <Sidebar />
+    <div className="flex-1 flex overflow-hidden">
+      {/* Main content area - 50% when right panel is open, full otherwise */}
+      <div className={rightPanelOpen ? "w-1/2 flex flex-col overflow-hidden" : "flex-1 flex flex-col overflow-hidden"}>
+        <TaskView
+          task={currentTask}
+          project={currentProject}
+          onOpenPanel={handleOpenPanel}
+          rightPanelOpen={rightPanelOpen}
+        />
+      </div>
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Main content area - 50% when right panel is open, full otherwise */}
-        <div className={rightPanelOpen ? "w-1/2 flex flex-col overflow-hidden" : "flex-1 flex flex-col overflow-hidden"}>
-          <TaskView
-            task={currentTask}
+      {/* Right Panel with tabs - 50% width */}
+      {rightPanelOpen && (
+        <div className="w-1/2 flex flex-col overflow-hidden">
+          <RightPanelTabs
             project={currentProject}
-            onOpenPanel={handleOpenPanel}
-            rightPanelOpen={rightPanelOpen}
+            task={currentTask}
+            onClose={() => setRightPanelOpen(false)}
+            defaultTab={defaultTab}
           />
         </div>
-
-        {/* Right Panel with tabs - 50% width */}
-        {rightPanelOpen && (
-          <div className="w-1/2 flex flex-col overflow-hidden">
-            <RightPanelTabs
-              project={currentProject}
-              task={currentTask}
-              onClose={() => setRightPanelOpen(false)}
-              defaultTab={defaultTab}
-            />
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }

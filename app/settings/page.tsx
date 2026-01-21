@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Sidebar } from '@/components/workspace/sidebar';
 import { IconPlug, IconCheck, IconSpinner, IconX, IconSearch } from '@/components/ui/icons';
 import { useStore } from '@/lib/store';
 import { AVAILABLE_INTEGRATIONS, INTEGRATION_CATEGORIES } from '@/lib/integrations';
@@ -130,10 +129,7 @@ export default function SettingsPage() {
   const connectedCount = integrations.filter((i) => i.connected).length;
 
   return (
-    <div className="flex h-screen bg-bg-base">
-      <Sidebar />
-
-      <main className="flex-1 flex flex-col overflow-hidden">
+    <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="h-14 px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -242,8 +238,7 @@ export default function SettingsPage() {
             })()}
           </div>
         </div>
-      </main>
-    </div>
+    </main>
   );
 }
 

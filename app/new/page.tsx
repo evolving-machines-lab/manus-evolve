@@ -3,7 +3,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
-import { Sidebar } from '@/components/workspace/sidebar';
 import {
   IconUpload,
   IconFile,
@@ -147,10 +146,7 @@ export default function NewProjectPage() {
   const currentStepIndex = STEPS.findIndex((s) => s.id === step);
 
   return (
-    <div className="flex h-screen bg-bg-base">
-      <Sidebar />
-
-      <main className="flex-1 flex flex-col overflow-hidden">
+    <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="px-6 py-4">
           <div className="flex items-start justify-between">
@@ -492,8 +488,6 @@ export default function NewProjectPage() {
             )}
           </div>
         </div>
-
-      </main>
-    </div>
+    </main>
   );
 }

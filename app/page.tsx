@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sidebar } from '@/components/workspace/sidebar';
 import { SelectionModal } from '@/components/selection-modal';
 import { ModelSelector, type ModelSelection } from '@/components/model-selector';
 import { IconAttach, IconPlug, IconMic, IconSkill, IconX } from '@/components/ui/icons';
@@ -137,10 +136,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="flex h-screen bg-bg-content">
-      <Sidebar />
-
-      <main className="flex-1 flex flex-col px-6 relative">
+    <main className="flex-1 flex flex-col px-6 relative bg-bg-content">
         {/* Model selector - top left */}
         <div className="absolute top-4 left-6">
           <ModelSelector
@@ -298,7 +294,6 @@ export default function HomePage() {
           </div>
         </div>
         </div>
-      </main>
 
       {/* Selection Modal */}
       <SelectionModal
@@ -310,6 +305,6 @@ export default function HomePage() {
         onSkillsChange={setSelectedSkills}
         initialTab={modalTab}
       />
-    </div>
+    </main>
   );
 }

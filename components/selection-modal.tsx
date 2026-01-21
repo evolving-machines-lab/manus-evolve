@@ -95,48 +95,48 @@ export function SelectionModal({
         onClick={e => e.stopPropagation()}
       >
         {/* Header with tabs and search */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setActiveTab('integrations')}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[14px] transition-all",
-                  activeTab === 'integrations'
-                    ? "bg-[#3a3a3a] text-text-primary font-medium"
-                    : "text-text-tertiary hover:text-text-secondary hover:bg-[#2a2a2a]"
-                )}
-              >
-                <IconPlug size={16} />
-                Integrations
-                <span className={cn(
-                  "ml-1 px-1.5 py-0.5 text-[11px] rounded-full bg-accent text-bg-base min-w-[20px] text-center",
-                  selectedIntegrations.length === 0 && "invisible"
-                )}>
-                  {selectedIntegrations.length || 0}
-                </span>
-              </button>
-              <button
-                onClick={() => setActiveTab('skills')}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[14px] transition-all",
-                  activeTab === 'skills'
-                    ? "bg-[#3a3a3a] text-text-primary font-medium"
-                    : "text-text-tertiary hover:text-text-secondary hover:bg-[#2a2a2a]"
-                )}
-              >
-                <IconSkill size={16} />
-                Skills
-                <span className={cn(
-                  "ml-1 px-1.5 py-0.5 text-[11px] rounded-full bg-accent text-bg-base min-w-[20px] text-center",
-                  selectedSkills.length === 0 && "invisible"
-                )}>
-                  {selectedSkills.length || 0}
-                </span>
-              </button>
-            </div>
+        <div className="flex items-center px-5 py-4 border-b border-border-subtle">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setActiveTab('integrations')}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[14px] transition-all",
+                activeTab === 'integrations'
+                  ? "bg-[#3a3a3a] text-text-primary font-medium"
+                  : "text-text-tertiary hover:text-text-secondary hover:bg-[#2a2a2a]"
+              )}
+            >
+              <IconPlug size={16} />
+              Integrations
+              <span className={cn(
+                "ml-1 px-1.5 py-0.5 text-[11px] rounded-full bg-accent text-bg-base min-w-[20px] text-center",
+                selectedIntegrations.length === 0 && "invisible"
+              )}>
+                {selectedIntegrations.length || 0}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('skills')}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[14px] transition-all",
+                activeTab === 'skills'
+                  ? "bg-[#3a3a3a] text-text-primary font-medium"
+                  : "text-text-tertiary hover:text-text-secondary hover:bg-[#2a2a2a]"
+              )}
+            >
+              <IconSkill size={16} />
+              Skills
+              <span className={cn(
+                "ml-1 px-1.5 py-0.5 text-[11px] rounded-full bg-accent text-bg-base min-w-[20px] text-center",
+                selectedSkills.length === 0 && "invisible"
+              )}>
+                {selectedSkills.length || 0}
+              </span>
+            </button>
+          </div>
 
-            {/* Search */}
+          {/* Search - centered */}
+          <div className="flex-1 flex justify-center">
             <div className="w-[240px]">
               <div className="relative">
                 <IconSearch size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-quaternary" />

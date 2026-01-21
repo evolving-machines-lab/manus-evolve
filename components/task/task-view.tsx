@@ -419,7 +419,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                   {/* Mini terminal - overflows above the bar */}
                   <div
                     onClick={() => onOpenPanel?.('browser')}
-                    className="absolute left-[17px] bottom-[17px] w-[160px] h-[100px] rounded-xl bg-bg-overlay border border-border-subtle overflow-hidden cursor-pointer group z-10"
+                    className="absolute left-[17px] bottom-[17px] w-[160px] h-[100px] rounded-xl bg-bg-overlay border border-border-subtle overflow-hidden cursor-pointer z-10"
                   >
                     <div className="h-full flex flex-col items-center justify-center p-2">
                       {isRunning ? (
@@ -434,38 +434,37 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                         </>
                       )}
                     </div>
-                    <div className="absolute bottom-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded bg-black/50">
-                      <IconExpand size={14} className="text-white" />
-                    </div>
                   </div>
 
                   {/* Thin progress bar */}
                   <div className="rounded-2xl border border-border-subtle bg-bg-surface px-4 py-3 pl-[191px]">
                     <div className="flex items-center gap-3">
                       <div className="flex-1 flex items-center gap-3">
-                        {task.progress.length > 0 ? (
-                          <>
-                            {task.progress[task.progress.length - 1].status === 'completed' ? (
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-green-500 flex-shrink-0">
-                                <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                            ) : task.progress[task.progress.length - 1].status === 'in_progress' ? (
-                              <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin flex-shrink-0" />
-                            ) : (
-                              <div className="w-5 h-5 rounded-full border border-text-quaternary flex-shrink-0" />
-                            )}
-                            <span className="text-[15px] text-text-primary flex-1">
-                              {task.progress[task.progress.length - 1].content}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-[15px] text-text-tertiary flex-1">Ready</span>
-                        )}
+                        {(() => {
+                          const currentStep = task.progress.find(p => p.status === 'in_progress') || task.progress[task.progress.length - 1];
+                          if (!currentStep) return <span className="text-[13px] text-text-tertiary flex-1">Ready</span>;
+                          return (
+                            <>
+                              {currentStep.status === 'completed' ? (
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-green-500 flex-shrink-0">
+                                  <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              ) : currentStep.status === 'in_progress' ? (
+                                <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin flex-shrink-0" />
+                              ) : (
+                                <div className="w-5 h-5 rounded-full border border-text-quaternary flex-shrink-0" />
+                              )}
+                              <span className="text-[13px] text-text-primary flex-1">
+                                {currentStep.content}
+                              </span>
+                            </>
+                          );
+                        })()}
                       </div>
 
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {task.progress.length > 0 && (
-                          <span className="text-[14px] text-text-tertiary">{completedSteps} / {totalSteps}</span>
+                          <span className="text-[12px] text-text-tertiary">{completedSteps} / {totalSteps}</span>
                         )}
                         <button
                           onClick={() => setPreviewCollapsed(false)}
@@ -535,8 +534,8 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                   {task.progress.length > 0 && (
                     <div className="mt-4 rounded-2xl border border-border-subtle bg-bg-overlay p-5">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-[18px] font-medium text-text-primary">Task progress</h3>
-                        <span className="text-[14px] text-text-tertiary">{completedSteps} / {totalSteps}</span>
+                        <h3 className="text-[15px] font-medium text-text-primary">Task progress</h3>
+                        <span className="text-[13px] text-text-tertiary">{completedSteps} / {totalSteps}</span>
                       </div>
                       <div className="space-y-4">
                         {task.progress.map((item) => (
@@ -551,7 +550,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                               <div className="w-5 h-5 rounded-full border border-text-quaternary mt-0.5 flex-shrink-0" />
                             )}
                             <span className={cn(
-                              'text-[16px] leading-relaxed',
+                              'text-[13px] leading-relaxed',
                               item.status === 'completed' ? 'text-text-primary' :
                               item.status === 'in_progress' ? 'text-text-primary' :
                               'text-text-tertiary'

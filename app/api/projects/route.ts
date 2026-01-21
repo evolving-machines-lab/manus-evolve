@@ -103,10 +103,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Add file metadata (content is stored in frontend state, uploaded via context on task run)
+    // Add files with content for context upload when task runs
     const savedFiles: Array<{ id: string; name: string; path: string; size: number; type: string }> = [];
     if (files && files.length > 0) {
       for (const file of files) {
+        // Decode content from base64 if needed
+        let content: Buffer | null = null;
+        if (file.content) {
+          if (file.isBase64) {
+            content = Buffer.from(file.content, 'base64');
+          } else if (typeof file.content === 'string') {
+            content = Buffer.from(file.content, 'utf-8');
+          }
+        }
+
         const fileId = nanoid();
         db.insert(projectFiles).values({
           id: fileId,
@@ -114,8 +124,8 @@ export async function POST(request: NextRequest) {
           name: file.name,
           path: file.path || file.name,
           type: file.type || 'application/octet-stream',
-          size: file.size || 0,
-          content: null, // Content uploaded separately when task runs
+          size: content?.length || file.size || 0,
+          content,
           uploadedAt: now,
         }).run();
 
@@ -123,7 +133,7 @@ export async function POST(request: NextRequest) {
           id: fileId,
           name: file.name,
           path: file.path || file.name,
-          size: file.size || 0,
+          size: content?.length || file.size || 0,
           type: file.type || 'application/octet-stream',
         });
       }

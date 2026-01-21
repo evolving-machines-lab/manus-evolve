@@ -151,12 +151,14 @@ export default function NewProjectPage() {
   const handleCreate = async () => {
     const name = projectName.trim() || `Project ${Date.now()}`;
 
-    // Prepare file metadata for API (without content - content uploaded separately)
-    const fileMetadata = files.map(f => ({
+    // Prepare files for API (include content for context upload)
+    const filesWithContent = files.map(f => ({
       name: f.name,
       path: f.path,
       type: f.type,
       size: f.size,
+      content: f.content,
+      isBase64: f.isBase64,
     }));
 
     try {
@@ -168,7 +170,7 @@ export default function NewProjectPage() {
           name,
           integrations: selectedIntegrations,
           skills: selectedSkills,
-          files: fileMetadata,
+          files: filesWithContent,
         }),
       });
 
@@ -178,26 +180,12 @@ export default function NewProjectPage() {
 
       const createdProject = await response.json();
 
-      // Add files with content for frontend compatibility (content needed for context upload)
-      const project = {
-        ...createdProject,
-        files: files.map(f => ({
-          id: f.id,
-          name: f.name,
-          path: f.path,
-          type: f.type,
-          size: f.size,
-          content: f.content,
-          isBase64: f.isBase64,
-        })),
-      };
-
-      // Update store
-      addProject(project);
+      // Update store with created project (API returns file metadata)
+      addProject(createdProject);
       setCurrentTask(null);
-      setCurrentProject(project);
+      setCurrentProject(createdProject);
 
-      router.push(`/${project.id}`);
+      router.push(`/${createdProject.id}`);
     } catch (error) {
       console.error('Error creating project:', error);
     }

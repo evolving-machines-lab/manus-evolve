@@ -584,7 +584,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
 
               {/* Manus thinking indicator - shows when waiting for response */}
               {taskStream.isRunning && displayMessages[displayMessages.length - 1]?.role === 'user' && (
-                <div className="animate-slide-up">
+                <div>
                   <div className="space-y-3">
                     <div className="flex items-start gap-2">
                       <IconLogo size={22} className="text-text-primary mt-0.5" />

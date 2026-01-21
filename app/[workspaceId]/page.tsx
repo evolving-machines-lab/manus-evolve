@@ -24,7 +24,10 @@ export default function ProjectPage() {
     setCurrentTask,
   } = useStore();
 
-  const [loading, setLoading] = useState(true);
+  // Check if we already have this project in the store
+  const hasProjectInStore = currentProject?.id === projectId;
+
+  const [loading, setLoading] = useState(!hasProjectInStore);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [defaultTab, setDefaultTab] = useState<'files' | 'artifacts' | 'browser'>('browser');
 

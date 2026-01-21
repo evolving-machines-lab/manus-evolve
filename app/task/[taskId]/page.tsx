@@ -20,14 +20,25 @@ export default function StandaloneTaskPage() {
     updateTask,
   } = useStore();
 
-  const [loading, setLoading] = useState(true);
+  // Check if we already have this task in the store (from navigation)
+  const hasTaskInStore = currentTask?.id === taskId;
+
+  const [loading, setLoading] = useState(!hasTaskInStore);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [defaultTab, setDefaultTab] = useState<'files' | 'artifacts' | 'browser'>('browser');
   const hasFetchedRef = useRef(false);
 
-  // Fetch task once on mount
+  // Fetch task once on mount (only if not already in store)
   useEffect(() => {
     if (hasFetchedRef.current) return;
+
+    // If we already have this task in store, skip fetch
+    if (hasTaskInStore) {
+      hasFetchedRef.current = true;
+      setCurrentProject(null);
+      return;
+    }
+
     hasFetchedRef.current = true;
 
     const fetchTask = async () => {
@@ -50,7 +61,7 @@ export default function StandaloneTaskPage() {
     };
 
     fetchTask();
-  }, [taskId, router, setCurrentTask, setCurrentProject]);
+  }, [taskId, router, setCurrentTask, setCurrentProject, hasTaskInStore]);
 
   const handleOpenPanel = (tab: 'files' | 'artifacts' | 'browser' = 'browser') => {
     setDefaultTab(tab);

@@ -20,6 +20,11 @@ import { AVAILABLE_INTEGRATIONS } from '@/lib/integrations';
 import { cn, generateId, formatBytes } from '@/lib/utils';
 import type { ProjectFile, Integration } from '@/lib/types';
 
+interface UploadedFile extends ProjectFile {
+  content?: string;
+  isBase64?: boolean;
+}
+
 type Step = 'files' | 'integrations' | 'skills';
 
 const STEPS: { id: Step; label: string; icon: typeof IconFolder }[] = [
@@ -34,11 +39,47 @@ export default function NewProjectPage() {
 
   const [step, setStep] = useState<Step>('files');
   const [projectName, setProjectName] = useState('');
-  const [files, setFiles] = useState<ProjectFile[]>([]);
+  const [files, setFiles] = useState<UploadedFile[]>([]);
   const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [integrationSearch, setIntegrationSearch] = useState('');
   const [skillSearch, setSkillSearch] = useState('');
+
+  // Helper to read file content
+  const readFileContent = (file: File): Promise<{ content: string; isBase64: boolean }> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.result) {
+          if (typeof reader.result === 'string') {
+            resolve({ content: reader.result, isBase64: false });
+          } else {
+            // Convert ArrayBuffer to base64
+            const bytes = new Uint8Array(reader.result);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            resolve({ content: btoa(binary), isBase64: true });
+          }
+        } else {
+          reject(new Error('Failed to read file'));
+        }
+      };
+      reader.onerror = () => reject(reader.error);
+
+      // Read text files as text, binary files as ArrayBuffer
+      const textTypes = ['text/', 'application/json', 'application/javascript', 'application/xml'];
+      const isText = textTypes.some(t => file.type.startsWith(t)) ||
+        file.name.match(/\.(txt|md|csv|json|js|ts|tsx|jsx|py|html|css|yaml|yml|xml|env|gitignore|sh|bash)$/i);
+
+      if (isText) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
+    });
+  };
 
   // Load integrations status from API on mount
   useEffect(() => {
@@ -68,14 +109,21 @@ export default function NewProjectPage() {
     fetchIntegrations();
   }, [setIntegrations]);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const newFiles: ProjectFile[] = acceptedFiles.map((file) => ({
-      id: generateId(),
-      name: file.name,
-      path: file.name,
-      size: file.size,
-      type: file.type,
-    }));
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    const newFiles: UploadedFile[] = await Promise.all(
+      acceptedFiles.map(async (file) => {
+        const { content, isBase64 } = await readFileContent(file);
+        return {
+          id: generateId(),
+          name: file.name,
+          path: file.name,
+          size: file.size,
+          type: file.type || 'application/octet-stream',
+          content,
+          isBase64,
+        };
+      })
+    );
     setFiles((prev) => [...prev, ...newFiles]);
   }, []);
 
@@ -103,6 +151,16 @@ export default function NewProjectPage() {
   const handleCreate = async () => {
     const name = projectName.trim() || `Project ${Date.now()}`;
 
+    // Prepare files for API (include content)
+    const filesForApi = files.map(f => ({
+      name: f.name,
+      path: f.path,
+      type: f.type,
+      size: f.size,
+      content: f.content,
+      isBase64: f.isBase64,
+    }));
+
     try {
       // Create project via API
       const response = await fetch('/api/projects', {
@@ -112,6 +170,7 @@ export default function NewProjectPage() {
           name,
           integrations: selectedIntegrations,
           skills: selectedSkills,
+          files: filesForApi,
         }),
       });
 
@@ -121,18 +180,12 @@ export default function NewProjectPage() {
 
       const createdProject = await response.json();
 
-      // Add files property for frontend compatibility
-      const project = {
-        ...createdProject,
-        files: files,
-      };
-
       // Update store
-      addProject(project);
+      addProject(createdProject);
       setCurrentTask(null);
-      setCurrentProject(project);
+      setCurrentProject(createdProject);
 
-      router.push(`/${project.id}`);
+      router.push(`/${createdProject.id}`);
     } catch (error) {
       console.error('Error creating project:', error);
     }

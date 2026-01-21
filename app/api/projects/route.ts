@@ -53,7 +53,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, description, integrations: integrationIds, skills: skillIds } = body;
+    const { name, description, integrations: integrationIds, skills: skillIds, files } = body;
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
@@ -94,12 +94,49 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Add files
+    const savedFiles: Array<{ id: string; name: string; path: string; size: number; type: string }> = [];
+    if (files && files.length > 0) {
+      for (const file of files) {
+        let content: Buffer | null = null;
+        if (file.content) {
+          if (file.isBase64) {
+            // Decode base64-encoded binary content
+            content = Buffer.from(file.content, 'base64');
+          } else if (typeof file.content === 'string') {
+            // Text content
+            content = Buffer.from(file.content, 'utf-8');
+          }
+        }
+
+        const fileId = nanoid();
+        db.insert(projectFiles).values({
+          id: fileId,
+          projectId,
+          name: file.name,
+          path: file.path || file.name,
+          type: file.type || 'application/octet-stream',
+          size: content?.length || file.size || 0,
+          content,
+          uploadedAt: now,
+        }).run();
+
+        savedFiles.push({
+          id: fileId,
+          name: file.name,
+          path: file.path || file.name,
+          size: content?.length || file.size || 0,
+          type: file.type || 'application/octet-stream',
+        });
+      }
+    }
+
     // Return created project
     const created = {
       id: projectId,
       name,
       description: description || undefined,
-      files: [],
+      files: savedFiles,
       integrations: integrationIds || [],
       skills: skillIds || [],
       createdAt: now,

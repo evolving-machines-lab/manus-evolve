@@ -87,10 +87,14 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
         });
       }
     },
-    onComplete: () => {
+    onComplete: (sessionId?: string) => {
       const currentTask = useStore.getState().currentTask;
       if (currentTask) {
-        updateTask(currentTask.id, { status: 'completed' });
+        // Update task with completed status and sessionId (for mid-task uploads)
+        updateTask(currentTask.id, {
+          status: 'completed',
+          ...(sessionId && { sessionId }),
+        });
       }
     },
     onError: (error) => {

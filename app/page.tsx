@@ -4,7 +4,8 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { SelectionModal } from '@/components/selection-modal';
 import { ModelSelector, type ModelSelection } from '@/components/model-selector';
-import { IconAttach, IconPlug, IconMic, IconSkill, IconX, IconFile } from '@/components/ui/icons';
+import { IconAttach, IconPlug, IconMic, IconSkill, IconX } from '@/components/ui/icons';
+import { RightPanelTabs } from '@/components/workspace/right-panel-tabs';
 import { useStore } from '@/lib/store';
 import { generateId, cn } from '@/lib/utils';
 import { AVAILABLE_INTEGRATIONS } from '@/lib/integrations';
@@ -28,6 +29,7 @@ export default function HomePage() {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [modelSelection, setModelSelection] = useState<ModelSelection>({ agent: 'claude', model: 'opus' });
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [showRightPanel, setShowRightPanel] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -199,16 +201,6 @@ export default function HomePage() {
     });
   };
 
-  const removeFile = (id: string) => {
-    setAttachedFiles(prev => prev.filter(f => f.id !== id));
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
   const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
     const bytes = new Uint8Array(buffer);
     let binary = '';
@@ -226,8 +218,43 @@ export default function HomePage() {
     return AVAILABLE_SKILLS.find(s => s.id === id)?.displayName || id;
   };
 
+  // Handle metadata changes from PreTaskFilesTab (for deletions)
+  const handlePreTaskFilesChange = (newFiles: { id: string; name: string; size: number; type: string }[]) => {
+    // Filter attachedFiles to only keep files that exist in newFiles
+    const newIds = new Set(newFiles.map(f => f.id));
+    setAttachedFiles(prev => prev.filter(f => newIds.has(f.id)));
+  };
+
+  // Handle new files added from PreTaskFilesTab
+  const handlePreTaskFilesAdded = async (files: File[]) => {
+    const newFiles: AttachedFile[] = [];
+    for (const file of files) {
+      const content = await readFileContent(file);
+      newFiles.push({
+        id: generateId(),
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        content,
+      });
+    }
+    setAttachedFiles(prev => [...prev, ...newFiles]);
+  };
+
+  // Convert attachedFiles to PreTaskFile format (metadata only) for RightPanelTabs
+  const preTaskFiles = attachedFiles.map(f => ({
+    id: f.id,
+    name: f.name,
+    size: f.size,
+    type: f.type,
+  }));
+
   return (
-    <main className="flex-1 flex flex-col px-6 relative bg-bg-content">
+    <div className="flex-1 flex">
+    <main className={cn(
+      "flex-1 flex flex-col px-6 relative bg-bg-content transition-all duration-300",
+      showRightPanel ? "mr-0" : ""
+    )}>
         {/* Model selector - top left */}
         <div className="absolute top-0 left-0 right-0 h-14 flex items-center px-4 gap-3">
           <ModelSelector
@@ -272,7 +299,7 @@ export default function HomePage() {
                   className="hidden"
                 />
                 <button
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => setShowRightPanel(true)}
                   className={cn(
                     "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle btn-bordered flex items-center justify-center transition-colors",
                     attachedFiles.length > 0 ? "text-accent" : "text-text-tertiary hover:text-text-secondary"
@@ -326,33 +353,6 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-
-          {/* Attached Files */}
-          {attachedFiles.length > 0 && (
-            <div className="mt-6">
-              <div className="flex items-center gap-2 mb-3">
-                <IconFile size={18} className="text-text-primary" />
-                <span className="text-[15px] font-medium text-text-primary">Attached Files</span>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {attachedFiles.map(file => (
-                  <div
-                    key={file.id}
-                    className="flex items-center gap-2 pl-3 pr-2 py-2 rounded-xl bg-bg-overlay text-[13px] text-text-primary"
-                  >
-                    <span className="truncate max-w-[200px]">{file.name}</span>
-                    <span className="text-text-tertiary text-[11px]">{formatFileSize(file.size)}</span>
-                    <button
-                      onClick={() => removeFile(file.id)}
-                      className="p-1 rounded-full hover:bg-bg-subtle text-text-tertiary hover:text-text-primary transition-colors"
-                    >
-                      <IconX size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Integrations and Skills side by side */}
           <div className="mt-12 flex gap-8">
@@ -436,5 +436,19 @@ export default function HomePage() {
         initialTab={modalTab}
       />
     </main>
+
+    {/* Right Panel - Reuses RightPanelTabs component */}
+    {showRightPanel && (
+      <RightPanelTabs
+        project={null}
+        task={null}
+        onClose={() => setShowRightPanel(false)}
+        defaultTab="files"
+        preTaskFiles={preTaskFiles}
+        onPreTaskFilesChange={handlePreTaskFilesChange}
+        onPreTaskFilesAdded={handlePreTaskFilesAdded}
+      />
+    )}
+    </div>
   );
 }

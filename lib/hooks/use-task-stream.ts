@@ -20,7 +20,7 @@ export interface UseTaskStreamOptions {
   onToolCall?: (toolCall: ToolCall) => void;
   onProgress?: (progress: ProgressItem[]) => void;
   onBrowserUrl?: (liveUrl?: string, screenshotUrl?: string) => void;
-  onComplete?: () => void;
+  onComplete?: (sessionId?: string) => void;
   onError?: (error: string) => void;
 }
 
@@ -308,7 +308,8 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
               status: 'completed',
               currentThought: '',
             }));
-            options.onComplete?.();
+            // Pass sessionId to callback so task can be updated
+            options.onComplete?.(data.sessionId);
             break;
         }
       } catch (error) {

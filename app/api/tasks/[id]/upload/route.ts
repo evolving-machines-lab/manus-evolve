@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, tasks } from '@/lib/db';
 import { eq } from 'drizzle-orm';
-import { uploadTaskContext, type FileMap } from '@/lib/evolve';
+import {
+  getEvolveInstance,
+  setEvolveInstance,
+  createEvolveInstance,
+  type FileMap
+} from '@/lib/evolve';
 
 // POST /api/tasks/:id/upload - Upload files mid-task
 export async function POST(
@@ -10,7 +15,7 @@ export async function POST(
 ) {
   const taskId = params.id;
 
-  // Verify task exists
+  // Verify task exists and get session info
   const task = db
     .select()
     .from(tasks)
@@ -19,6 +24,11 @@ export async function POST(
 
   if (!task) {
     return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+  }
+
+  // Check if task has an active session
+  if (!task.sessionId) {
+    return NextResponse.json({ error: 'Task has no active session' }, { status: 400 });
   }
 
   try {
@@ -50,8 +60,25 @@ export async function POST(
       return NextResponse.json({ error: 'No files provided' }, { status: 400 });
     }
 
-    // Upload to active session
-    await uploadTaskContext(taskId, files);
+    // Ensure we have an Evolve instance - reconnect if needed
+    let evolve = getEvolveInstance(taskId);
+    if (!evolve) {
+      // Reconnect to existing session using stored sessionId
+      console.log(`[Upload] Reconnecting to session ${task.sessionId} for task ${taskId}`);
+      evolve = createEvolveInstance({
+        agent: (task.agent as 'claude' | 'codex' | 'gemini' | 'qwen') || 'claude',
+        model: task.model || 'opus',
+        skills: [],
+        integrations: [],
+        userId: 'default_user',
+        sessionId: task.sessionId,  // Reconnect to existing session
+      });
+      setEvolveInstance(taskId, evolve);
+    }
+
+    // Upload to active session using SDK's uploadContext method
+    await evolve.uploadContext(files);
+    console.log(`[Upload] Successfully uploaded ${Object.keys(files).length} file(s) to context/`);
 
     return NextResponse.json({
       success: true,

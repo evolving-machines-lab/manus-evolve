@@ -6,6 +6,7 @@ import {
   runTask,
   prepareContextFiles,
   DEFAULT_SYSTEM_PROMPT,
+  getEvolveInstance,
   type FileMap,
   type EvolveCallbacks,
 } from '@/lib/evolve';
@@ -113,6 +114,24 @@ export async function POST(
       let currentMessageId: string | null = null;
       let currentMessageContent = '';
       let currentThoughtContent = '';
+      let sessionIdSaved = false;
+
+      // Helper to save sessionId to database as soon as sandbox is active
+      const saveSessionIdIfNeeded = () => {
+        if (sessionIdSaved) return;
+        const evolve = getEvolveInstance(taskId);
+        if (evolve) {
+          const sessionId = evolve.getSession();
+          if (sessionId) {
+            db.update(tasks)
+              .set({ sessionId })
+              .where(eq(tasks.id, taskId))
+              .run();
+            sessionIdSaved = true;
+            console.log(`[Run] Saved sessionId ${sessionId} for task ${taskId}`);
+          }
+        }
+      };
 
       // Update task status to running
       db.update(tasks)
@@ -156,6 +175,9 @@ export async function POST(
       // Setup callbacks for streaming
       const callbacks: EvolveCallbacks = {
         onMessageChunk: (content, isThought) => {
+          // Save sessionId as soon as we get first output (sandbox is active)
+          saveSessionIdIfNeeded();
+
           if (isThought) {
             currentThoughtContent += content;
             send('thought_chunk', { content });
@@ -193,6 +215,9 @@ export async function POST(
         },
 
         onToolCall: (toolCall) => {
+          // Save sessionId as soon as we get first output (sandbox is active)
+          saveSessionIdIfNeeded();
+
           // Ensure message exists before inserting tool call
           ensureMessageExists();
 

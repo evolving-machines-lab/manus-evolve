@@ -1,60 +1,67 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { IconPlus, IconFolder } from '@/components/ui/icons';
-import { useStore } from '@/lib/store';
 import { cn, formatBytes, generateId } from '@/lib/utils';
 import { FileIcon } from './file-icon';
-import type { Project, ProjectFile, Task } from '@/lib/types';
+import type { Task } from '@/lib/types';
 
-interface FilesTabProps {
-  project: Project;
-  task?: Task | null;
+interface StandaloneFile {
+  id: string;
+  name: string;
+  path: string;
+  size: number;
+  type: string;
 }
 
-export function FilesTab({ project, task }: FilesTabProps) {
-  const { updateProject } = useStore();
+interface StandaloneFilesTabProps {
+  task: Task;
+}
+
+export function StandaloneFilesTab({ task }: StandaloneFilesTabProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [files, setFiles] = useState<StandaloneFile[]>([]);
+
+  // Fetch task context files on mount
+  useEffect(() => {
+    const fetchFiles = async () => {
+      try {
+        const response = await fetch(`/api/tasks/${task.id}/files`);
+        if (response.ok) {
+          const data = await response.json();
+          setFiles(data.files || []);
+        }
+      } catch (error) {
+        console.error('Error fetching task files:', error);
+      }
+    };
+    fetchFiles();
+  }, [task.id]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
+    const selectedFiles = e.target.files;
+    if (!selectedFiles) return;
 
-    const fileArray = Array.from(files);
+    const fileArray = Array.from(selectedFiles);
 
-    const newFiles: ProjectFile[] = fileArray.map((file) => ({
+    // Add to local state immediately for UI feedback
+    const newFiles: StandaloneFile[] = fileArray.map((file) => ({
       id: generateId(),
       name: file.name,
-      path: `/${file.name}`,
+      path: file.name,
       size: file.size,
       type: file.type || 'application/octet-stream',
     }));
+    setFiles((prev) => [...prev, ...newFiles]);
 
-    // Update frontend state
-    updateProject(project.id, {
-      files: [...project.files, ...newFiles],
-    });
-
-    // Save to localStorage
-    const stored = localStorage.getItem('swarmkit-projects');
-    if (stored) {
-      const projects = JSON.parse(stored);
-      const idx = projects.findIndex((p: Project) => p.id === project.id);
-      if (idx !== -1) {
-        projects[idx].files = [...project.files, ...newFiles];
-        localStorage.setItem('swarmkit-projects', JSON.stringify(projects));
-      }
-    }
-
-    // If there's an active task with a session, upload files to the sandbox
+    // If task has an active session, upload files to the sandbox
     // Check sessionId instead of status because status becomes 'completed' after each run
-    if (task && task.sessionId) {
+    if (task.sessionId) {
       setIsUploading(true);
       try {
         const formData = new FormData();
         for (const file of fileArray) {
-          // Use the file name as the key (will be placed in context/ folder)
           formData.append(file.name, file);
         }
 
@@ -83,22 +90,10 @@ export function FilesTab({ project, task }: FilesTabProps) {
   };
 
   const handleDeleteFile = (fileId: string) => {
-    const updatedFiles = project.files.filter((f) => f.id !== fileId);
-    updateProject(project.id, { files: updatedFiles });
-
-    // Save to localStorage
-    const stored = localStorage.getItem('swarmkit-projects');
-    if (stored) {
-      const projects = JSON.parse(stored);
-      const idx = projects.findIndex((p: Project) => p.id === project.id);
-      if (idx !== -1) {
-        projects[idx].files = updatedFiles;
-        localStorage.setItem('swarmkit-projects', JSON.stringify(projects));
-      }
-    }
+    setFiles((prev) => prev.filter((f) => f.id !== fileId));
   };
 
-  if (project.files.length === 0) {
+  if (files.length === 0) {
     return (
       <div className="h-full relative">
         <div className="absolute top-4 right-4">
@@ -132,8 +127,10 @@ export function FilesTab({ project, task }: FilesTabProps) {
             onChange={handleFileUpload}
           />
         </div>
-        <div className="h-full flex items-center justify-center">
+        <div className="h-full flex flex-col items-center justify-center gap-3">
           <IconFolder size={32} className="text-text-quaternary" />
+          <p className="text-[13px] text-text-tertiary">No files attached</p>
+          <p className="text-[12px] text-text-quaternary">Upload files to share with the agent</p>
         </div>
       </div>
     );
@@ -144,7 +141,7 @@ export function FilesTab({ project, task }: FilesTabProps) {
       {/* Header with upload button */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between">
         <span className="text-[13px] text-text-tertiary">
-          {project.files.length} {project.files.length === 1 ? 'file' : 'files'}
+          {files.length} {files.length === 1 ? 'file' : 'files'}
         </span>
         <button
           onClick={() => fileInputRef.current?.click()}
@@ -180,7 +177,7 @@ export function FilesTab({ project, task }: FilesTabProps) {
       {/* Files list */}
       <div className="flex-1 overflow-y-auto px-2 pb-2">
         <div className="space-y-1">
-          {project.files.map((file) => (
+          {files.map((file) => (
             <div
               key={file.id}
               className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-bg-overlay transition-colors"

@@ -9,15 +9,28 @@ import {
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { FilesTab } from './files-tab';
+import { StandaloneFilesTab } from './standalone-files-tab';
+import { PreTaskFilesTab } from './pre-task-files-tab';
 import { ArtifactsTab } from './artifacts-tab';
 import { BrowserTab } from './browser-tab';
 import type { Task, Project } from '@/lib/types';
+
+interface PreTaskFile {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+}
 
 interface RightPanelTabsProps {
   project: Project | null;
   task: Task | null;
   onClose: () => void;
   defaultTab?: 'files' | 'artifacts' | 'browser';
+  // For home page (pre-task) file management
+  preTaskFiles?: PreTaskFile[];
+  onPreTaskFilesChange?: (files: PreTaskFile[]) => void;
+  onPreTaskFilesAdded?: (files: File[]) => void;
 }
 
 // Icon for artifacts/output
@@ -31,7 +44,7 @@ function IconOutput({ size = 20, className }: { size?: number; className?: strin
   );
 }
 
-export function RightPanelTabs({ project, task, onClose, defaultTab = 'browser' }: RightPanelTabsProps) {
+export function RightPanelTabs({ project, task, onClose, defaultTab = 'browser', preTaskFiles, onPreTaskFilesChange, onPreTaskFilesAdded }: RightPanelTabsProps) {
   const { rightPanelView, setRightPanelView } = useStore();
   const [activeTab, setActiveTab] = useState<'files' | 'artifacts' | 'browser'>(defaultTab);
 
@@ -97,9 +110,15 @@ export function RightPanelTabs({ project, task, onClose, defaultTab = 'browser' 
         {/* Tab content */}
         <div className="flex-1 overflow-hidden">
           {activeTab === 'files' && project && (
-            <FilesTab project={project} />
+            <FilesTab project={project} task={task} />
           )}
-          {activeTab === 'files' && !project && (
+          {activeTab === 'files' && !project && task && (
+            <StandaloneFilesTab task={task} />
+          )}
+          {activeTab === 'files' && !project && !task && preTaskFiles && onPreTaskFilesChange && (
+            <PreTaskFilesTab files={preTaskFiles} onFilesChange={onPreTaskFilesChange} onFilesAdded={onPreTaskFilesAdded} />
+          )}
+          {activeTab === 'files' && !project && !task && !preTaskFiles && (
             <div className="h-full flex items-center justify-center">
               <IconFolder size={32} className="text-text-quaternary" />
             </div>

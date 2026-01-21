@@ -147,13 +147,13 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
           if (!isOpen) setExpandedAgent(null);
         }}
         className={cn(
-          "flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[15px] font-medium transition-all duration-200",
+          "flex items-center justify-between gap-2 w-[140px] px-4 py-2.5 rounded-2xl text-[15px] font-medium transition-all duration-200",
           "bg-bg-surface/80 backdrop-blur-sm hover:bg-bg-overlay border border-white/[0.06]",
           "shadow-[0_2px_8px_rgba(0,0,0,0.12)]",
           isOpen && "bg-bg-overlay border-white/[0.1]"
         )}
       >
-        <span className="text-text-primary">{displayName}</span>
+        <span className="text-text-primary truncate">{displayName}</span>
         <IconChevronDown
           size={16}
           className={cn(

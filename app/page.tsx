@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/workspace/sidebar';
 import { SelectionModal } from '@/components/selection-modal';
+import { ModelSelector } from '@/components/model-selector';
 import { IconAttach, IconPlug, IconMic, IconSkill, IconX } from '@/components/ui/icons';
 import { useStore } from '@/lib/store';
 import { generateId, cn } from '@/lib/utils';
@@ -18,6 +19,7 @@ export default function HomePage() {
   const [modalTab, setModalTab] = useState<'integrations' | 'skills'>('integrations');
   const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState('claude');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -55,6 +57,7 @@ export default function HomePage() {
       artifacts: [],
       integrations: selectedIntegrations,
       skills: selectedSkills,
+      agent: selectedAgent,
       createdAt: now,
       updatedAt: now,
     };
@@ -107,12 +110,22 @@ export default function HomePage() {
     <div className="flex h-screen bg-bg-base">
       <Sidebar />
 
-      <main className="flex-1 flex flex-col items-center justify-start pt-[20vh] px-6">
-        <div className="w-full max-w-2xl">
-          {/* Greeting */}
-          <h1 className="text-2xl font-medium text-text-primary text-center mb-8">
-            What can I help you with?
-          </h1>
+      <main className="flex-1 flex flex-col px-6 relative">
+        {/* Model selector - top left */}
+        <div className="absolute top-4 left-6">
+          <ModelSelector
+            selectedAgent={selectedAgent}
+            onAgentChange={setSelectedAgent}
+          />
+        </div>
+
+        {/* Center content */}
+        <div className="flex-1 flex flex-col items-center justify-start pt-[20vh]">
+          <div className="w-full max-w-2xl">
+            {/* Greeting */}
+            <h1 className="text-2xl font-medium text-text-primary text-center mb-8">
+              What can I help you with?
+            </h1>
 
           {/* Input box */}
           <div className={cn(
@@ -253,6 +266,7 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+        </div>
         </div>
       </main>
 

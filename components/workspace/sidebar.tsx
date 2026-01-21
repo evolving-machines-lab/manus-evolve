@@ -144,15 +144,26 @@ export function Sidebar() {
   }, []);
 
   // Delete a project and its tasks
-  const deleteProject = (projectId: string) => {
-    const updated = projects.filter(w => w.id !== projectId);
-    setProjects(updated);
-    localStorage.setItem('swarmkit-projects', JSON.stringify(updated));
-    localStorage.removeItem(`swarmkit-tasks-${projectId}`);
-    if (currentProject?.id === projectId) {
-      setCurrentProject(null);
-      setCurrentTask(null);
-      router.push('/');
+  const deleteProject = async (projectId: string) => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Update local state
+        const updated = projects.filter(w => w.id !== projectId);
+        setProjects(updated);
+        setAllTasks(prev => prev.filter(t => t.projectId !== projectId));
+
+        if (currentProject?.id === projectId) {
+          setCurrentProject(null);
+          setCurrentTask(null);
+          router.push('/');
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting project:', error);
     }
   };
 
@@ -198,16 +209,37 @@ export function Sidebar() {
   };
 
   // Save project rename
-  const saveProjectRename = (projectId: string) => {
+  const saveProjectRename = async (projectId: string) => {
     if (!editValue.trim()) {
       setEditingId(null);
       return;
     }
-    const updated = projects.map(w =>
-      w.id === projectId ? { ...w, name: editValue.trim() } : w
-    );
-    setProjects(updated);
-    localStorage.setItem('swarmkit-projects', JSON.stringify(updated));
+
+    const newName = editValue.trim();
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        const updated = projects.map(w =>
+          w.id === projectId ? { ...w, name: newName } : w
+        );
+        setProjects(updated);
+
+        // Update current project if it's the one being renamed
+        if (currentProject?.id === projectId) {
+          setCurrentProject({ ...currentProject, name: newName });
+        }
+      }
+    } catch (error) {
+      console.error('Error renaming project:', error);
+    }
+
     setEditingId(null);
   };
 
@@ -258,6 +290,23 @@ export function Sidebar() {
       setEditingId(null);
     }
   };
+
+  // Load projects from API on mount
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const response = await fetch('/api/projects');
+        if (response.ok) {
+          const apiProjects = await response.json();
+          setProjects(apiProjects);
+        }
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+      }
+    };
+
+    fetchProjects();
+  }, [setProjects]);
 
   // Load all tasks from API on mount and when currentTask changes (e.g., after task creation)
   useEffect(() => {

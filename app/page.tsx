@@ -23,14 +23,18 @@ export default function HomePage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem('swarmkit-projects');
-    if (stored) {
+    const fetchProjects = async () => {
       try {
-        setProjects(JSON.parse(stored));
-      } catch (e) {
-        console.error('Failed to parse projects:', e);
+        const response = await fetch('/api/projects');
+        if (response.ok) {
+          const apiProjects = await response.json();
+          setProjects(apiProjects);
+        }
+      } catch (error) {
+        console.error('Error fetching projects:', error);
       }
-    }
+    };
+    fetchProjects();
   }, [setProjects]);
 
   useEffect(() => {

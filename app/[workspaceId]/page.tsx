@@ -31,36 +31,37 @@ export default function ProjectPage() {
 
   useEffect(() => {
     const loadProject = async () => {
-      // Load projects from localStorage
-      const storedProjects = localStorage.getItem('swarmkit-projects');
-      if (storedProjects) {
-        const parsed: Project[] = JSON.parse(storedProjects);
-        setProjects(parsed);
+      try {
+        // Load projects from API
+        const projectsResponse = await fetch('/api/projects');
+        if (!projectsResponse.ok) {
+          router.push('/');
+          return;
+        }
 
-        const project = parsed.find((p) => p.id === projectId);
+        const apiProjects: Project[] = await projectsResponse.json();
+        setProjects(apiProjects);
+
+        const project = apiProjects.find((p) => p.id === projectId);
         if (project) {
           setCurrentProject(project);
         } else {
           router.push('/');
           return;
         }
-      } else {
-        router.push('/');
-        return;
-      }
 
-      // Fetch project tasks from API
-      try {
-        const response = await fetch(`/api/tasks?projectId=${projectId}`);
-        if (response.ok) {
-          const projectTasks: Task[] = await response.json();
+        // Fetch project tasks from API
+        const tasksResponse = await fetch(`/api/tasks?projectId=${projectId}`);
+        if (tasksResponse.ok) {
+          const projectTasks: Task[] = await tasksResponse.json();
           setTasks(projectTasks);
         } else {
           setTasks([]);
         }
       } catch (error) {
-        console.error('Error fetching project tasks:', error);
-        setTasks([]);
+        console.error('Error loading project:', error);
+        router.push('/');
+        return;
       }
 
       setLoading(false);

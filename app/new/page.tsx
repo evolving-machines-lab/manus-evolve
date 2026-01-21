@@ -91,30 +91,42 @@ export default function NewProjectPage() {
     );
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     const name = projectName.trim() || `Project ${Date.now()}`;
-    const project = {
-      id: generateId(),
-      name,
-      files,
-      integrations: selectedIntegrations,
-      skills: selectedSkills,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
 
-    addProject(project);
+    try {
+      // Create project via API
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          integrations: selectedIntegrations,
+          skills: selectedSkills,
+        }),
+      });
 
-    const stored = localStorage.getItem('swarmkit-projects');
-    const projects = stored ? JSON.parse(stored) : [];
-    projects.push(project);
-    localStorage.setItem('swarmkit-projects', JSON.stringify(projects));
+      if (!response.ok) {
+        throw new Error('Failed to create project');
+      }
 
-    // Clear current task and set new project before navigating
-    setCurrentTask(null);
-    setCurrentProject(project);
+      const createdProject = await response.json();
 
-    router.push(`/${project.id}`);
+      // Add files property for frontend compatibility
+      const project = {
+        ...createdProject,
+        files: files,
+      };
+
+      // Update store
+      addProject(project);
+      setCurrentTask(null);
+      setCurrentProject(project);
+
+      router.push(`/${project.id}`);
+    } catch (error) {
+      console.error('Error creating project:', error);
+    }
   };
 
   const canProceed = () => {

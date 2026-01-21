@@ -286,8 +286,8 @@ function IntegrationCard({
             {integration.displayName}
           </h3>
           {integration.connected && (
-            <div className="w-4 h-4 rounded-full bg-success/20 flex items-center justify-center">
-              <IconCheck size={10} className="text-success" />
+            <div className="w-5 h-5 rounded-full bg-success/20 flex items-center justify-center">
+              <IconCheck size={12} className="text-success" />
             </div>
           )}
         </div>

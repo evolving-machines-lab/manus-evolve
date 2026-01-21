@@ -39,6 +39,13 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
   const [modalTab, setModalTab] = useState<'integrations' | 'skills'>('integrations');
   const [modelSelection, setModelSelection] = useState<ModelSelection>({ agent: 'claude', model: 'opus' });
   const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [spinnerIndex, setSpinnerIndex] = useState(0);
+  const [funWordIndex, setFunWordIndex] = useState(0);
+
+  // Braille spinner characters
+  const spinnerChars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  // Fun rotating words for loading state
+  const funWords = ['thinking', 'contemplating', 'tinkering', 'pondering', 'bambaloozing', 'conjuring', 'manifesting'];
 
   // Initialize with project defaults
   const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>(
@@ -120,6 +127,24 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
     }
   }, [input]);
+
+  // Braille spinner animation when streaming
+  useEffect(() => {
+    if (!taskStream.isRunning) return;
+    const interval = setInterval(() => {
+      setSpinnerIndex((prev) => (prev + 1) % spinnerChars.length);
+    }, 50);
+    return () => clearInterval(interval);
+  }, [taskStream.isRunning, spinnerChars.length]);
+
+  // Rotate fun words every 4 seconds when streaming
+  useEffect(() => {
+    if (!taskStream.isRunning) return;
+    const interval = setInterval(() => {
+      setFunWordIndex((prev) => (prev + 1) % funWords.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [taskStream.isRunning, funWords.length]);
 
   const handleSubmit = async () => {
     if (!input.trim() || !task) return;
@@ -535,17 +560,19 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                   ) : (
                     /* Assistant message - left aligned with branding */
                     <div className="space-y-3">
-                      {/* Header with logo and model badge */}
-                      <div className="flex items-baseline gap-2">
-                        <IconLogo size={22} className="text-text-primary self-center" />
-                        <span className="text-[16px] font-semibold text-text-primary">manus</span>
-                        <span className="text-[11px] px-2 py-0.5 rounded-md bg-[#2a2a2a] text-text-tertiary border border-border-subtle translate-y-[-1px]">
-                          {(() => {
-                            const agentType = AGENT_TYPES.find(a => a.id === task?.agent) || AGENT_TYPES[0];
-                            const model = agentType.models.find(m => m.model === task?.model) || agentType.models.find(m => m.isDefault);
-                            return model?.displayName || 'Lite';
-                          })()}
-                        </span>
+                      {/* Header with logo */}
+                      <div className="flex items-start gap-2">
+                        <IconLogo size={22} className="text-text-primary mt-0.5" />
+                        <div className="flex flex-col">
+                          <span className="text-[16px] font-semibold text-text-primary">manus</span>
+                          {/* Show spinner + fun word when streaming on last message */}
+                          {taskStream.isRunning && index === displayMessages.length - 1 && (
+                            <span className="text-[12px] text-text-tertiary flex items-center gap-1.5">
+                              <span className="text-accent">{spinnerChars[spinnerIndex]}</span>
+                              {funWords[funWordIndex]}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       {/* Message content */}
                       <div className="prose prose-invert prose-sm max-w-none text-[15px] text-text-primary leading-relaxed">

@@ -263,7 +263,8 @@ export function Sidebar() {
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const response = await fetch('/api/tasks');
+        // Fetch ALL tasks (both standalone and project tasks)
+        const response = await fetch('/api/tasks?showAll=true');
         if (response.ok) {
           const apiTasks = await response.json();
           setAllTasks(apiTasks);

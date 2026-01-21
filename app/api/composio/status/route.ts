@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { composio } from '@/lib/evolve';
-import { db, userIntegrations, integrations } from '@/lib/db';
+import { db, userIntegrations, integrations, DEFAULT_USER_ID } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
-
-const DEFAULT_USER_ID = 'default-user';
 
 // GET /api/composio/status - Get all integration connection statuses
 export async function GET(request: NextRequest) {

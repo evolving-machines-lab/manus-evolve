@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db, tasks, messages, progressItems, toolCalls, projects } from '@/lib/db';
+import { db, tasks, messages, progressItems, toolCalls, projects, DEFAULT_USER_ID } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import {
@@ -17,8 +17,6 @@ import type {
   ProgressStatus,
   ProgressPriority,
 } from '@/lib/db/schema';
-
-const DEFAULT_USER_ID = 'default-user';
 
 // POST /api/tasks/:id/run - Run task with SSE streaming
 export async function POST(

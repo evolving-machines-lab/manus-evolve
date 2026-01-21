@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, userIntegrations } from '@/lib/db';
+import { db, userIntegrations, DEFAULT_USER_ID } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
-
-const DEFAULT_USER_ID = 'default-user';
 
 // POST /api/integrations/:id - Connect an integration
 // In a real app, this would redirect to OAuth or return an auth URL

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, integrations, userIntegrations } from '@/lib/db';
+import { db, integrations, userIntegrations, DEFAULT_USER_ID } from '@/lib/db';
 import { eq } from 'drizzle-orm';
-
-const DEFAULT_USER_ID = 'default-user';
 
 // GET /api/integrations - List all integrations with user connection status
 export async function GET() {

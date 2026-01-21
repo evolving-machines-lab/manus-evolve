@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, projects, projectIntegrations, projectSkills, projectFiles } from '@/lib/db';
+import { db, projects, projectIntegrations, projectSkills, projectFiles, DEFAULT_USER_ID } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
-
-const DEFAULT_USER_ID = 'default-user';
 
 // GET /api/projects - List all projects
 export async function GET() {

@@ -33,16 +33,14 @@ export default function StandaloneTaskPage() {
 
     const fetchTask = async () => {
       try {
-        const response = await fetch(`/api/tasks`);
+        // Fetch single task directly by ID
+        const response = await fetch(`/api/tasks/${taskId}`);
         if (response.ok) {
-          const tasks: Task[] = await response.json();
-          const task = tasks.find(t => t.id === taskId);
-          if (task) {
-            setCurrentTask(task);
-            setCurrentProject(null);
-            setLoading(false);
-            return;
-          }
+          const task: Task = await response.json();
+          setCurrentTask(task);
+          setCurrentProject(null);
+          setLoading(false);
+          return;
         }
       } catch (error) {
         console.error('Error fetching task:', error);

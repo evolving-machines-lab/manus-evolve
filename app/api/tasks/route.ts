@@ -1,20 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, tasks, messages, progressItems, taskIntegrations, taskSkills, projects } from '@/lib/db';
+import { db, tasks, messages, progressItems, taskIntegrations, taskSkills, projects, DEFAULT_USER_ID } from '@/lib/db';
 import { eq, isNull, and } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import type { AgentType, TaskStatus } from '@/lib/db/schema';
 
-const DEFAULT_USER_ID = 'default-user';
-
-// GET /api/tasks - List all standalone tasks (or tasks for a project via query param)
+// GET /api/tasks - List tasks
+// Query params:
+//   - projectId: filter by specific project
+//   - showAll: if true, return ALL tasks (both standalone and project tasks)
+//   - (no params): return only standalone tasks
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('projectId');
+    const showAll = searchParams.get('showAll') === 'true';
 
-    const whereClause = projectId
-      ? eq(tasks.projectId, projectId)
-      : and(eq(tasks.userId, DEFAULT_USER_ID), isNull(tasks.projectId));
+    // Determine filter
+    let whereClause;
+    if (projectId) {
+      // Filter by specific project
+      whereClause = eq(tasks.projectId, projectId);
+    } else if (showAll) {
+      // Return ALL tasks for user (both standalone and project)
+      whereClause = eq(tasks.userId, DEFAULT_USER_ID);
+    } else {
+      // Default: only standalone tasks
+      whereClause = and(eq(tasks.userId, DEFAULT_USER_ID), isNull(tasks.projectId));
+    }
 
     const result = await db.query.tasks.findMany({
       where: whereClause,

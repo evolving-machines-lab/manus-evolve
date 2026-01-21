@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { composio } from '@/lib/evolve';
-import { db, integrations, userIntegrations } from '@/lib/db';
+import { db, integrations, userIntegrations, DEFAULT_USER_ID } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
-
-const DEFAULT_USER_ID = 'default-user';
 
 // POST /api/composio/auth/:toolkit - Get OAuth URL for a toolkit
 export async function POST(

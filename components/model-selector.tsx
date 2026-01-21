@@ -163,10 +163,10 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
         />
       </button>
 
-      {/* Backdrop */}
+      {/* Invisible backdrop to catch outside clicks */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-40"
+          className="fixed inset-0 z-40"
           onClick={() => {
             setIsOpen(false);
             setExpandedAgent(null);

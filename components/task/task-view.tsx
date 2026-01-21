@@ -47,12 +47,12 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
   // Fun rotating words for loading state
   const funWords = ['thinking', 'contemplating', 'tinkering', 'pondering', 'bambaloozing', 'conjuring', 'manifesting'];
 
-  // Initialize with project defaults
+  // Initialize with task values first, then project defaults
   const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>(
-    project?.integrations || []
+    task?.integrations || project?.integrations || []
   );
   const [selectedSkills, setSelectedSkills] = useState<string[]>(
-    project?.skills || []
+    task?.skills || project?.skills || []
   );
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -112,10 +112,11 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
   }, [task?.id, task?.status, taskStream, updateTask]);
 
   // Update selections when project changes
+  // Sync selections when task or project changes
   useEffect(() => {
-    setSelectedIntegrations(project?.integrations || []);
-    setSelectedSkills(project?.skills || []);
-  }, [project]);
+    setSelectedIntegrations(task?.integrations || project?.integrations || []);
+    setSelectedSkills(task?.skills || project?.skills || []);
+  }, [task?.id, project?.id, task?.integrations, task?.skills, project?.integrations, project?.skills]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

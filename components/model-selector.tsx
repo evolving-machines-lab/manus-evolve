@@ -193,6 +193,7 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
                   >
                     <button
                       onClick={() => handleAgentSelect(agent)}
+                      onDoubleClick={() => setExpandedAgent(agent.id)}
                       className="flex-1 flex items-center px-3 py-3 text-left"
                     >
                       <div className="flex-1 min-w-0">

@@ -118,15 +118,8 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
   }, [isOpen, expandedAgent]);
 
   const handleAgentClick = (agent: AgentType) => {
-    if (expandedAgent === agent.id) {
-      // Already expanded, select default and close
-      onSelectionChange({ agent: agent.id, model: agent.defaultModel });
-      setIsOpen(false);
-      setExpandedAgent(null);
-    } else {
-      // Expand to show models
-      setExpandedAgent(agent.id);
-    }
+    // Toggle expand/collapse
+    setExpandedAgent(expandedAgent === agent.id ? null : agent.id);
   };
 
   const handleModelSelect = (agent: AgentType, model: AgentModel) => {

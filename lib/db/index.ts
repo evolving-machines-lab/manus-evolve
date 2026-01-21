@@ -3,6 +3,8 @@ import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { eq } from 'drizzle-orm';
 import * as schema from './schema';
 import path from 'path';
+import { AVAILABLE_SKILLS } from '../skills';
+import { AVAILABLE_INTEGRATIONS } from '../integrations';
 
 // Database path - use data directory for persistence
 const DB_PATH = process.env.DATABASE_PATH || path.join(process.cwd(), 'data', 'manus.db');
@@ -34,8 +36,42 @@ function ensureDefaultUser() {
   }
 }
 
+// Seed skills catalog
+function seedSkills() {
+  const count = db.select().from(schema.skills).all().length;
+  if (count === 0) {
+    for (const skill of AVAILABLE_SKILLS) {
+      db.insert(schema.skills).values({
+        id: skill.id,
+        name: skill.name,
+        displayName: skill.displayName,
+        description: skill.description,
+        category: skill.category as schema.SkillCategory,
+      }).run();
+    }
+  }
+}
+
+// Seed integrations catalog
+function seedIntegrations() {
+  const count = db.select().from(schema.integrations).all().length;
+  if (count === 0) {
+    for (const integration of AVAILABLE_INTEGRATIONS) {
+      db.insert(schema.integrations).values({
+        id: integration.id,
+        name: integration.name,
+        displayName: integration.displayName,
+        description: integration.description,
+        category: 'general', // Default category
+      }).run();
+    }
+  }
+}
+
 // Initialize on module load
 ensureDefaultUser();
+seedSkills();
+seedIntegrations();
 
 // Export schema for use in queries
 export * from './schema';

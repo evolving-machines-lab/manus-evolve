@@ -141,7 +141,10 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
           setIsOpen(!isOpen);
           if (!isOpen) setExpandedAgent(null);
         }}
-        className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-bg-surface/80 backdrop-blur-sm hover:bg-[#2a2a2a] transition-colors"
+        className={cn(
+          "flex items-center gap-3 px-3 py-2.5 rounded-xl bg-bg-surface/80 backdrop-blur-sm hover:bg-[#2a2a2a] transition-colors",
+          isOpen && "bg-[#2a2a2a]"
+        )}
       >
         <div className="flex items-baseline gap-1.5">
           <span className="text-[15px] font-medium text-text-primary">{currentAgent.name}</span>

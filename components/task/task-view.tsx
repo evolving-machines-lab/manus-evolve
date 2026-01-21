@@ -368,7 +368,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
               <span className="text-[15px] font-medium text-text-primary">
                 {project.name}
               </span>
-              <span className="text-text-quaternary mx-1">/</span>
+              <span className="text-text-quaternary">/</span>
             </>
           )}
 

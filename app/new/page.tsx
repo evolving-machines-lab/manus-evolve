@@ -31,7 +31,7 @@ const STEPS: { id: Step; label: string; icon: typeof IconFolder }[] = [
 
 export default function NewProjectPage() {
   const router = useRouter();
-  const { addProject, integrations, setIntegrations } = useStore();
+  const { addProject, integrations, setIntegrations, setCurrentProject, setCurrentTask } = useStore();
 
   const [step, setStep] = useState<Step>('files');
   const [projectName, setProjectName] = useState('');
@@ -109,6 +109,10 @@ export default function NewProjectPage() {
     const projects = stored ? JSON.parse(stored) : [];
     projects.push(project);
     localStorage.setItem('swarmkit-projects', JSON.stringify(projects));
+
+    // Clear current task and set new project before navigating
+    setCurrentTask(null);
+    setCurrentProject(project);
 
     router.push(`/${project.id}`);
   };

@@ -112,20 +112,22 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
     },
   });
 
-  // Auto-start task if pending and hasn't been run yet (no messages)
-  // The messages check prevents re-running on remount after navigation
+  // Auto-start task if pending and hasn't been run yet
+  // Check: no assistant messages yet (only user messages or empty)
+  // This prevents re-running on remount after navigation
   useEffect(() => {
+    const hasAssistantResponse = task?.messages?.some(m => m.role === 'assistant');
     if (
       task &&
       task.status === 'pending' &&
-      (!task.messages || task.messages.length === 0) &&
+      !hasAssistantResponse &&
       hasAutoStartedRef.current !== task.id
     ) {
       hasAutoStartedRef.current = task.id;
       updateTask(task.id, { status: 'running' });
       taskStream.runTask(task.id);
     }
-  }, [task?.id, task?.status, task?.messages?.length, taskStream, updateTask]);
+  }, [task?.id, task?.status, task?.messages, taskStream, updateTask]);
 
   // Update selections when project changes
   // Sync selections when task or project changes
@@ -216,6 +218,15 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
   const completedSteps = displayProgress.filter((p) => p.status === 'completed').length || 0;
   const totalSteps = displayProgress.length || 0;
   const isRunning = isCreatingTask || taskStream.isRunning || task?.status === 'running';
+
+  // Track whether to show preview (Manus-style: only show when agent is using tools)
+  // Show preview if: agent has made tool calls OR task has messages with tool calls (from previous runs)
+  const hasToolCalls = taskStream.hasToolCalls ||
+    (task?.messages?.some(m => m.toolCalls && m.toolCalls.length > 0) ?? false);
+  const currentToolName = taskStream.currentToolName;
+
+  // Determine if browser is being used (for display purposes)
+  const isBrowserActive = displayBrowserLiveUrl || displayBrowserScreenshotUrl;
 
   const handleCreateTask = async () => {
     if (!input.trim() || isCreatingTask) return;
@@ -642,29 +653,37 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
       <div className="absolute bottom-0 left-0 right-0 p-4 space-y-4 z-10 pointer-events-none">
         {/* pointer-events-none on container, pointer-events-auto on children */}
         <div className="max-w-3xl mx-auto space-y-2">
-          {/* Preview Cards - Manus style */}
-          {!rightPanelOpen && (
+          {/* Preview Cards - Manus style: only show when agent is using tools */}
+          {!rightPanelOpen && hasToolCalls && (
             <>
               {previewCollapsed ? (
                 <div className="relative pt-[60px]">
-                  {/* Mini terminal - overflows above the bar */}
+                  {/* Mini preview - shows browser screenshot if available, otherwise terminal placeholder */}
                   <div
                     onClick={() => onOpenPanel?.('browser')}
                     className="absolute left-[17px] bottom-[17px] w-[160px] h-[100px] rounded-xl bg-[#363636] border border-[#4a4a4a] overflow-hidden cursor-pointer z-10 pointer-events-auto shadow-sm"
                   >
-                    <div className="h-full flex flex-col items-center justify-center p-2">
-                      {isRunning ? (
-                        <>
-                          <div className="w-8 h-8 rounded-full border-2 border-accent border-t-transparent animate-spin mb-2" />
-                          <span className="text-[9px] text-text-tertiary">Working...</span>
-                        </>
-                      ) : (
-                        <>
-                          <IconTerminal size={24} className="text-text-quaternary mb-2" />
-                          <span className="text-[9px] text-text-tertiary">Ready</span>
-                        </>
-                      )}
-                    </div>
+                    {displayBrowserScreenshotUrl ? (
+                      <img
+                        src={displayBrowserScreenshotUrl}
+                        alt="Browser preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center p-2">
+                        {isRunning ? (
+                          <>
+                            <div className="w-8 h-8 rounded-full border-2 border-accent border-t-transparent animate-spin mb-2" />
+                            <span className="text-[9px] text-text-tertiary">Working...</span>
+                          </>
+                        ) : (
+                          <>
+                            <IconTerminal size={24} className="text-text-quaternary mb-2" />
+                            <span className="text-[9px] text-text-tertiary">Ready</span>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Thin progress bar */}
@@ -714,19 +733,27 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                       onClick={() => onOpenPanel?.('browser')}
                       className="relative w-[160px] h-[100px] rounded-xl bg-[#363636] border border-[#4a4a4a] overflow-hidden cursor-pointer group flex-shrink-0 shadow-sm"
                     >
-                      <div className="h-full flex flex-col items-center justify-center p-2">
-                        {isRunning ? (
-                          <>
-                            <div className="w-8 h-8 rounded-full border-2 border-accent border-t-transparent animate-spin mb-2" />
-                            <span className="text-[9px] text-text-tertiary">Working...</span>
-                          </>
-                        ) : (
-                          <>
-                            <IconTerminal size={24} className="text-text-quaternary mb-2" />
-                            <span className="text-[9px] text-text-tertiary">Ready</span>
-                          </>
-                        )}
-                      </div>
+                      {displayBrowserScreenshotUrl ? (
+                        <img
+                          src={displayBrowserScreenshotUrl}
+                          alt="Browser preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full flex flex-col items-center justify-center p-2">
+                          {isRunning ? (
+                            <>
+                              <div className="w-8 h-8 rounded-full border-2 border-accent border-t-transparent animate-spin mb-2" />
+                              <span className="text-[9px] text-text-tertiary">Working...</span>
+                            </>
+                          ) : (
+                            <>
+                              <IconTerminal size={24} className="text-text-quaternary mb-2" />
+                              <span className="text-[9px] text-text-tertiary">Ready</span>
+                            </>
+                          )}
+                        </div>
+                      )}
                       <div className="absolute bottom-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded bg-black/50">
                         <IconExpand size={14} className="text-white" />
                       </div>
@@ -738,10 +765,18 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                       </h3>
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-lg bg-bg-overlay flex items-center justify-center">
-                          <IconTerminal size={16} className="text-text-secondary" />
+                          {isBrowserActive ? (
+                            <IconMonitor size={16} className="text-text-secondary" />
+                          ) : (
+                            <IconTerminal size={16} className="text-text-secondary" />
+                          )}
                         </div>
                         <span className="text-[14px] text-text-secondary">
-                          Manus is using <span className="text-text-primary">Terminal</span>
+                          {isRunning ? (
+                            <>Manus is using <span className="text-text-primary">{currentToolName || (isBrowserActive ? 'Browser' : 'Terminal')}</span></>
+                          ) : (
+                            <>Manus used <span className="text-text-primary">{isBrowserActive ? 'Browser' : 'Terminal'}</span></>
+                          )}
                         </span>
                       </div>
                     </div>

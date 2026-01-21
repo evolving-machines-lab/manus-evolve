@@ -14,6 +14,9 @@ export interface TaskStreamState {
   browserLiveUrl?: string;
   browserScreenshotUrl?: string;
   error?: string;
+  // Tool call tracking for preview visibility
+  hasToolCalls: boolean;
+  currentToolName?: string;
 }
 
 export interface UseTaskStreamOptions {
@@ -34,6 +37,8 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
     progress: [],
     artifacts: [],
     currentThought: '',
+    hasToolCalls: false,
+    currentToolName: undefined,
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -63,6 +68,8 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
         progress: [], // Clear progress for new run
         error: undefined,
         currentThought: '',
+        hasToolCalls: false, // Reset tool call tracking for new run
+        currentToolName: undefined,
       }));
 
       try {
@@ -209,9 +216,18 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
             }
             options.onToolCall?.(data as ToolCall);
 
-            // Update message in state
+            // Update message in state and set hasToolCalls + currentToolName
             setState((prev) => {
-              if (!currentMessageRef.current) return prev;
+              const toolCall = data as ToolCall;
+              const toolUpdate = {
+                hasToolCalls: true,
+                currentToolName: toolCall.title || toolCall.name,
+              };
+
+              if (!currentMessageRef.current) {
+                return { ...prev, ...toolUpdate };
+              }
+
               const idx = prev.messages.findIndex(
                 (m) => m.id === currentMessageRef.current?.id
               );
@@ -221,9 +237,10 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
                   ...newMessages[idx],
                   toolCalls: currentMessageRef.current.toolCalls,
                 };
-                return { ...prev, messages: newMessages };
+                return { ...prev, messages: newMessages, ...toolUpdate };
               }
-              return prev;
+
+              return { ...prev, ...toolUpdate };
             });
             break;
 
@@ -354,6 +371,8 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
       progress: [],
       artifacts: [],
       currentThought: '',
+      hasToolCalls: false,
+      currentToolName: undefined,
     });
   }, [cancel]);
 

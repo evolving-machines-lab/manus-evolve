@@ -187,8 +187,8 @@ export function SelectionModal({
                     className={cn(
                       'group flex items-center gap-3 p-4 rounded-xl text-left transition-all duration-150 outline-none',
                       isSelected
-                        ? 'bg-accent-subtle border border-accent/50'
-                        : 'bg-bg-surface border border-transparent',
+                        ? 'bg-accent-muted'
+                        : 'bg-bg-surface',
                       !readOnly && !isSelected && 'hover:bg-[#2a2a2a] cursor-pointer',
                       readOnly && 'cursor-default'
                     )}
@@ -256,8 +256,8 @@ export function SelectionModal({
                           className={cn(
                             'group flex items-center gap-3 p-4 rounded-xl text-left transition-all duration-150 outline-none',
                             isSelected
-                              ? 'bg-accent-subtle border border-accent/50'
-                              : 'bg-bg-surface border border-transparent',
+                              ? 'bg-accent-muted'
+                              : 'bg-bg-surface',
                             !readOnly && !isSelected && 'hover:bg-[#2a2a2a] cursor-pointer',
                             readOnly && 'cursor-default'
                           )}

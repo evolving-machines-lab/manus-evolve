@@ -281,12 +281,12 @@ function IntegrationCard({
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-baseline gap-2">
           <h3 className="text-[13px] font-medium text-text-primary">
             {integration.displayName}
           </h3>
           {integration.connected && (
-            <div className="w-5 h-5 rounded-full bg-success/20 flex items-center justify-center">
+            <div className="w-5 h-5 rounded-full bg-success/20 flex items-center justify-center relative top-[1px]">
               <IconCheck size={12} className="text-success" />
             </div>
           )}

@@ -199,7 +199,7 @@ export function SelectionModal({
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-baseline gap-2">
                         <p className={cn(
                           'text-[13px] font-medium',
                           isSelected ? 'text-text-primary' : 'text-text-secondary group-hover:text-text-primary'
@@ -207,7 +207,7 @@ export function SelectionModal({
                           {integration.displayName}
                         </p>
                         {isConnected && (
-                          <div className="w-5 h-5 rounded-full bg-success/20 flex items-center justify-center">
+                          <div className="w-5 h-5 rounded-full bg-success/20 flex items-center justify-center relative top-[1px]">
                             <IconCheck size={12} className="text-success" />
                           </div>
                         )}

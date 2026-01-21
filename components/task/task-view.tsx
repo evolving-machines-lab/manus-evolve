@@ -54,41 +54,43 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
 
   const { updateTask, addTask, setCurrentTask } = useStore();
 
-  // Task streaming hook
+  // Task streaming hook - always get current task from store to handle newly created tasks
   const taskStream = useTaskStream({
     onMessage: (message) => {
-      if (task) {
-        // Get current task from store to avoid stale closure
-        const currentTask = useStore.getState().currentTask;
-        const currentMessages = currentTask?.messages || [];
-        updateTask(task.id, {
+      const currentTask = useStore.getState().currentTask;
+      if (currentTask) {
+        const currentMessages = currentTask.messages || [];
+        updateTask(currentTask.id, {
           messages: [...currentMessages, message],
         });
       }
     },
     onProgress: (progress) => {
-      if (task) {
-        updateTask(task.id, { progress });
+      const currentTask = useStore.getState().currentTask;
+      if (currentTask) {
+        updateTask(currentTask.id, { progress });
       }
     },
     onBrowserUrl: (liveUrl, screenshotUrl) => {
-      if (task) {
-        const currentTask = useStore.getState().currentTask;
-        updateTask(task.id, {
-          browserLiveUrl: liveUrl || currentTask?.browserLiveUrl,
-          browserScreenshotUrl: screenshotUrl || currentTask?.browserScreenshotUrl,
+      const currentTask = useStore.getState().currentTask;
+      if (currentTask) {
+        updateTask(currentTask.id, {
+          browserLiveUrl: liveUrl || currentTask.browserLiveUrl,
+          browserScreenshotUrl: screenshotUrl || currentTask.browserScreenshotUrl,
         });
       }
     },
     onComplete: () => {
-      if (task) {
-        updateTask(task.id, { status: 'completed' });
+      const currentTask = useStore.getState().currentTask;
+      if (currentTask) {
+        updateTask(currentTask.id, { status: 'completed' });
       }
     },
     onError: (error) => {
       console.error('Task error:', error);
-      if (task) {
-        updateTask(task.id, { status: 'failed' });
+      const currentTask = useStore.getState().currentTask;
+      if (currentTask) {
+        updateTask(currentTask.id, { status: 'failed' });
       }
     },
   });

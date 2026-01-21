@@ -20,7 +20,7 @@ import { ModelSelector, AGENT_TYPES, type ModelSelection } from '@/components/mo
 import { useStore } from '@/lib/store';
 import { cn, generateId } from '@/lib/utils';
 import { useTaskStream } from '@/lib/hooks/use-task-stream';
-import type { Task, Project, Message, ToolCall, ProgressItem } from '@/lib/types';
+import type { Task, Project, Message, ToolCall, ProgressItem, Artifact } from '@/lib/types';
 import ReactMarkdown from 'react-markdown';
 import { AVAILABLE_INTEGRATIONS } from '@/lib/integrations';
 import { AVAILABLE_SKILLS } from '@/lib/skills';
@@ -87,6 +87,12 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
         });
       }
     },
+    onArtifacts: (artifacts) => {
+      const currentTask = useStore.getState().currentTask;
+      if (currentTask) {
+        updateTask(currentTask.id, { artifacts });
+      }
+    },
     onComplete: (sessionId?: string) => {
       const currentTask = useStore.getState().currentTask;
       if (currentTask) {
@@ -106,14 +112,20 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
     },
   });
 
-  // Auto-start task if pending (only once per task)
+  // Auto-start task if pending and hasn't been run yet (no messages)
+  // The messages check prevents re-running on remount after navigation
   useEffect(() => {
-    if (task && task.status === 'pending' && hasAutoStartedRef.current !== task.id) {
+    if (
+      task &&
+      task.status === 'pending' &&
+      (!task.messages || task.messages.length === 0) &&
+      hasAutoStartedRef.current !== task.id
+    ) {
       hasAutoStartedRef.current = task.id;
       updateTask(task.id, { status: 'running' });
       taskStream.runTask(task.id);
     }
-  }, [task?.id, task?.status, taskStream, updateTask]);
+  }, [task?.id, task?.status, task?.messages?.length, taskStream, updateTask]);
 
   // Update selections when project changes
   // Sync selections when task or project changes
@@ -508,7 +520,8 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
   }
 
   // Calculate bottom padding based on preview state (needs to be taller than bottom section)
-  const bottomPadding = rightPanelOpen ? 'pb-[140px]' : 'pb-[380px]';
+  // When right panel is open, only input shows. When closed, preview + progress + input
+  const bottomPadding = rightPanelOpen ? 'pb-[220px]' : 'pb-[420px]';
 
   return (
     <div className="flex-1 h-full bg-bg-content relative overflow-hidden">

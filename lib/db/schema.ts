@@ -110,7 +110,7 @@ export const progressItems = sqliteTable('progress_items', {
   updatedAt: text('updated_at').notNull().default(new Date().toISOString()),
 });
 
-// 7. Artifacts
+// 7. Artifacts (output files from agent runs)
 export const artifacts = sqliteTable('artifacts', {
   id: text('id').primaryKey(),
   taskId: text('task_id').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
@@ -118,6 +118,7 @@ export const artifacts = sqliteTable('artifacts', {
   path: text('path').notNull(),
   type: text('type').notNull(),
   size: integer('size').notNull(),
+  content: blob('content'), // File content (text or binary)
   createdAt: text('created_at').notNull().default(new Date().toISOString()),
 });
 

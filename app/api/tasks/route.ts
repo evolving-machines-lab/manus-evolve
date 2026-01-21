@@ -41,7 +41,17 @@ export async function GET(request: NextRequest) {
         progressItems: {
           orderBy: (progressItems, { asc }) => [asc(progressItems.createdAt)],
         },
-        artifacts: true,
+        artifacts: {
+          columns: {
+            id: true,
+            name: true,
+            path: true,
+            type: true,
+            size: true,
+            createdAt: true,
+            // Exclude content blob - too large for list view
+          },
+        },
         integrations: true,
         skills: true,
       },

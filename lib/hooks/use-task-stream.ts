@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import type { Message, ToolCall, ProgressItem } from '@/lib/types';
+import type { Message, ToolCall, ProgressItem, Artifact } from '@/lib/types';
 import { nanoid } from 'nanoid';
 
 export interface TaskStreamState {
@@ -9,6 +9,7 @@ export interface TaskStreamState {
   status: 'idle' | 'running' | 'completed' | 'failed' | 'paused';
   messages: Message[];
   progress: ProgressItem[];
+  artifacts: Artifact[];
   currentThought: string;
   browserLiveUrl?: string;
   browserScreenshotUrl?: string;
@@ -19,6 +20,7 @@ export interface UseTaskStreamOptions {
   onMessage?: (message: Message) => void;
   onToolCall?: (toolCall: ToolCall) => void;
   onProgress?: (progress: ProgressItem[]) => void;
+  onArtifacts?: (artifacts: Artifact[]) => void;
   onBrowserUrl?: (liveUrl?: string, screenshotUrl?: string) => void;
   onComplete?: (sessionId?: string) => void;
   onError?: (error: string) => void;
@@ -30,6 +32,7 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
     status: 'idle',
     messages: [],
     progress: [],
+    artifacts: [],
     currentThought: '',
   });
 
@@ -278,6 +281,14 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
             options.onBrowserUrl?.(data.liveUrl, data.screenshotUrl);
             break;
 
+          case 'artifacts':
+            setState((prev) => ({
+              ...prev,
+              artifacts: data.artifacts as Artifact[],
+            }));
+            options.onArtifacts?.(data.artifacts as Artifact[]);
+            break;
+
           case 'error':
             setState((prev) => ({
               ...prev,
@@ -341,6 +352,7 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
       status: 'idle',
       messages: [],
       progress: [],
+      artifacts: [],
       currentThought: '',
     });
   }, [cancel]);

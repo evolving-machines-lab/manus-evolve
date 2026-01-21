@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db, tasks, messages, progressItems, toolCalls, projects, projectFiles, taskContextFiles, DEFAULT_USER_ID } from '@/lib/db';
+import { db, tasks, messages, progressItems, toolCalls, artifacts, projects, projectFiles, taskContextFiles, DEFAULT_USER_ID } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import {
@@ -7,6 +7,7 @@ import {
   prepareContextFiles,
   DEFAULT_SYSTEM_PROMPT,
   getEvolveInstance,
+  getTaskOutput,
   type FileMap,
   type EvolveCallbacks,
 } from '@/lib/evolve';
@@ -18,6 +19,33 @@ import type {
   ProgressStatus,
   ProgressPriority,
 } from '@/lib/db/schema';
+
+// Helper to determine file MIME type from extension
+function getFileType(fileName: string): string {
+  const ext = fileName.split('.').pop()?.toLowerCase() || '';
+  const mimeTypes: Record<string, string> = {
+    'pdf': 'application/pdf',
+    'json': 'application/json',
+    'txt': 'text/plain',
+    'md': 'text/markdown',
+    'html': 'text/html',
+    'css': 'text/css',
+    'js': 'application/javascript',
+    'ts': 'application/typescript',
+    'png': 'image/png',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'gif': 'image/gif',
+    'svg': 'image/svg+xml',
+    'csv': 'text/csv',
+    'xml': 'application/xml',
+    'zip': 'application/zip',
+    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  };
+  return mimeTypes[ext] || 'application/octet-stream';
+}
 
 // POST /api/tasks/:id/run - Run task with SSE streaming
 export async function POST(
@@ -322,6 +350,59 @@ export async function POST(
             .set({ content: currentMessageContent })
             .where(eq(messages.id, currentMessageId))
             .run();
+        }
+
+        // Fetch output files (artifacts) from sandbox
+        const outputResult = await getTaskOutput(taskId, true);
+        const artifactsList: Array<{
+          id: string;
+          name: string;
+          path: string;
+          type: string;
+          size: number;
+          content?: string;
+        }> = [];
+
+        if (outputResult.files && Object.keys(outputResult.files).length > 0) {
+          // Clear previous artifacts for this task
+          db.delete(artifacts).where(eq(artifacts.taskId, taskId)).run();
+
+          for (const [filePath, content] of Object.entries(outputResult.files)) {
+            const artifactId = nanoid();
+            const fileName = filePath.split('/').pop() || filePath;
+            const fileType = getFileType(fileName);
+            const contentBuffer = typeof content === 'string'
+              ? Buffer.from(content, 'utf-8')
+              : Buffer.from(content as Uint8Array);
+            const fileSize = contentBuffer.length;
+
+            // Save to database
+            db.insert(artifacts).values({
+              id: artifactId,
+              taskId,
+              name: fileName,
+              path: filePath,
+              type: fileType,
+              size: fileSize,
+              content: contentBuffer,
+              createdAt: new Date().toISOString(),
+            }).run();
+
+            // Build artifact for SSE (send base64 for binary content)
+            artifactsList.push({
+              id: artifactId,
+              name: fileName,
+              path: filePath,
+              type: fileType,
+              size: fileSize,
+              content: typeof content === 'string' ? content : Buffer.from(content as Uint8Array).toString('base64'),
+            });
+          }
+
+          // Send artifacts to frontend
+          if (artifactsList.length > 0) {
+            send('artifacts', { artifacts: artifactsList });
+          }
         }
 
         // Update task with session ID and completed status

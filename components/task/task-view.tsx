@@ -12,8 +12,10 @@ import {
   IconPlug,
   IconSkill,
   IconX,
+  IconFolder,
 } from '@/components/ui/icons';
 import { SelectionModal } from '@/components/selection-modal';
+import { AGENT_TYPES } from '@/components/model-selector';
 import { useStore } from '@/lib/store';
 import { cn, generateId } from '@/lib/utils';
 import type { Task, Project, Message } from '@/lib/types';
@@ -356,13 +358,31 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
 
   return (
     <div className="flex-1 flex flex-col h-full bg-bg-base">
-      {/* Header */}
-      <header className="h-12 px-4 flex items-center justify-between">
+      {/* Header with breadcrumb */}
+      <header className="h-14 px-4 flex items-center">
         <div className="flex items-center gap-2">
-          <StatusDot status={task.status} size={6} pulse={isRunning} />
-          <h1 className="text-[14px] text-text-primary truncate max-w-md">
-            {task.title || 'Untitled task'}
-          </h1>
+          {/* Project breadcrumb (only for project tasks) */}
+          {project && (
+            <>
+              <IconFolder size={16} className="text-text-primary" />
+              <span className="text-[15px] font-medium text-text-primary">
+                {project.name}
+              </span>
+              <span className="text-text-quaternary mx-1">/</span>
+            </>
+          )}
+
+          {/* Agent and model display */}
+          {(() => {
+            const agentType = AGENT_TYPES.find(a => a.id === task.agent) || AGENT_TYPES[0];
+            const model = agentType.models.find(m => m.model === task.model) || agentType.models.find(m => m.isDefault);
+            return (
+              <div className="flex items-baseline gap-1.5 px-3 py-2 rounded-xl bg-bg-surface/80">
+                <span className="text-[15px] font-medium text-text-primary">{agentType.name}</span>
+                <span className="text-[11px] text-text-tertiary">{model?.displayName}</span>
+              </div>
+            );
+          })()}
         </div>
       </header>
 

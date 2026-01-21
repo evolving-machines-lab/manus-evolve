@@ -35,3 +35,4 @@ next-env.d.ts
 # data
 /data/
 /uploads/
+sqlite.db

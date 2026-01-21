@@ -91,72 +91,76 @@ export function SelectionModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-4xl bg-[#202020] border border-border-subtle rounded-2xl shadow-2xl overflow-hidden"
+        className="w-full max-w-5xl bg-[#202020] border border-border-subtle rounded-2xl shadow-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
-        {/* Header with tabs */}
-        <div className="flex items-center gap-4 px-5 py-4 border-b border-border-subtle">
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setActiveTab('integrations')}
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[14px] transition-all",
-                activeTab === 'integrations'
-                  ? "bg-[#3a3a3a] text-text-primary font-medium"
-                  : "text-text-tertiary hover:text-text-secondary hover:bg-[#2a2a2a]"
-              )}
-            >
-              <IconPlug size={16} />
-              Integrations
-              {selectedIntegrations.length > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 text-[11px] rounded-full bg-accent text-bg-base">
-                  {selectedIntegrations.length}
+        {/* Header with tabs and search */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setActiveTab('integrations')}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[14px] transition-all",
+                  activeTab === 'integrations'
+                    ? "bg-[#3a3a3a] text-text-primary font-medium"
+                    : "text-text-tertiary hover:text-text-secondary hover:bg-[#2a2a2a]"
+                )}
+              >
+                <IconPlug size={16} />
+                Integrations
+                <span className={cn(
+                  "ml-1 px-1.5 py-0.5 text-[11px] rounded-full bg-accent text-bg-base min-w-[20px] text-center",
+                  selectedIntegrations.length === 0 && "invisible"
+                )}>
+                  {selectedIntegrations.length || 0}
                 </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('skills')}
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[14px] transition-all",
-                activeTab === 'skills'
-                  ? "bg-[#3a3a3a] text-text-primary font-medium"
-                  : "text-text-tertiary hover:text-text-secondary hover:bg-[#2a2a2a]"
-              )}
-            >
-              <IconSkill size={16} />
-              Skills
-              {selectedSkills.length > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 text-[11px] rounded-full bg-accent text-bg-base">
-                  {selectedSkills.length}
+              </button>
+              <button
+                onClick={() => setActiveTab('skills')}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[14px] transition-all",
+                  activeTab === 'skills'
+                    ? "bg-[#3a3a3a] text-text-primary font-medium"
+                    : "text-text-tertiary hover:text-text-secondary hover:bg-[#2a2a2a]"
+                )}
+              >
+                <IconSkill size={16} />
+                Skills
+                <span className={cn(
+                  "ml-1 px-1.5 py-0.5 text-[11px] rounded-full bg-accent text-bg-base min-w-[20px] text-center",
+                  selectedSkills.length === 0 && "invisible"
+                )}>
+                  {selectedSkills.length || 0}
                 </span>
-              )}
-            </button>
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="w-[240px]">
+              <div className="relative">
+                <IconSearch size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-quaternary" />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder={`Search ${activeTab}...`}
+                  className="w-full pl-9 pr-3 py-2 bg-bg-surface border border-border-subtle rounded-lg text-[13px]
+                    text-text-primary placeholder:text-text-quaternary
+                    focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20
+                    transition-all duration-150"
+                />
+              </div>
+            </div>
           </div>
-          <div className="flex-1" />
+
           <button
             onClick={onClose}
             className="p-1.5 text-text-tertiary hover:text-text-secondary transition-colors rounded-lg hover:bg-[#2a2a2a]"
           >
             <IconX size={20} />
           </button>
-        </div>
-
-        {/* Search */}
-        <div className="px-5 py-3 border-b border-border-subtle">
-          <div className="relative max-w-md">
-            <IconSearch size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-quaternary" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder={`Search ${activeTab}...`}
-              className="w-full pl-11 pr-4 py-3 bg-bg-surface border border-border-subtle rounded-lg
-                text-text-primary placeholder:text-text-quaternary
-                focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20
-                transition-all duration-150"
-            />
-          </div>
         </div>
 
         {/* Content */}

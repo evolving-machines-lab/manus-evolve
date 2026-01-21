@@ -186,7 +186,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
   };
 
   // Render the input section with chips (shared between empty and task views)
-  const renderInputSection = (onSubmit: () => void, onKeyDown: (e: React.KeyboardEvent) => void, disabled = false) => (
+  const renderInputSection = (onSubmit: () => void, onKeyDown: (e: React.KeyboardEvent) => void, disabled = false, showSelections = true) => (
     <>
       <div className={cn(
         'rounded-3xl border bg-bg-surface p-4 transition-all duration-150',
@@ -257,74 +257,76 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
         </div>
       </div>
 
-      {/* Integrations and Skills side by side */}
-      <div className="mt-12 flex gap-8">
-        {/* Selected Integrations section */}
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-3">
-            <IconPlug size={18} className="text-text-primary" />
-            <span className="text-[15px] font-medium text-text-primary">Integrations</span>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {selectedIntegrations.map(id => (
-              <div
-                key={id}
-                className="flex items-center gap-2 pl-3 pr-2 py-2 rounded-xl bg-accent-muted text-[13px] text-text-primary"
-              >
-                <span>{getIntegrationName(id)}</span>
-                <button
-                  onClick={() => removeIntegration(id)}
-                  className="p-1 rounded-full hover:bg-accent-muted text-text-tertiary hover:text-text-primary transition-colors"
+      {/* Integrations and Skills side by side - only shown when creating new task */}
+      {showSelections && (
+        <div className="mt-12 flex gap-8">
+          {/* Selected Integrations section */}
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-3">
+              <IconPlug size={18} className="text-text-primary" />
+              <span className="text-[15px] font-medium text-text-primary">Integrations</span>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {selectedIntegrations.map(id => (
+                <div
+                  key={id}
+                  className="flex items-center gap-2 pl-3 pr-2 py-2 rounded-xl bg-accent-muted text-[13px] text-text-primary"
                 >
-                  <IconX size={14} />
-                </button>
-              </div>
-            ))}
-            <button
-              onClick={openIntegrationsModal}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-border-subtle text-[13px] text-text-tertiary hover:text-text-secondary hover:border-border-default transition-colors"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              <span>Add</span>
-            </button>
+                  <span>{getIntegrationName(id)}</span>
+                  <button
+                    onClick={() => removeIntegration(id)}
+                    className="p-1 rounded-full hover:bg-accent-muted text-text-tertiary hover:text-text-primary transition-colors"
+                  >
+                    <IconX size={14} />
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={openIntegrationsModal}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-border-subtle text-[13px] text-text-tertiary hover:text-text-secondary hover:border-border-default transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                <span>Add</span>
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Selected Skills section */}
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-3">
-            <IconSkill size={18} className="text-text-primary" />
-            <span className="text-[15px] font-medium text-text-primary">Skills</span>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {selectedSkills.map(id => (
-              <div
-                key={id}
-                className="flex items-center gap-2 pl-3 pr-2 py-2 rounded-xl bg-accent-muted text-[13px] text-text-primary"
-              >
-                <span>{getSkillName(id)}</span>
-                <button
-                  onClick={() => removeSkill(id)}
-                  className="p-1 rounded-full hover:bg-accent-muted text-text-tertiary hover:text-text-primary transition-colors"
+          {/* Selected Skills section */}
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-3">
+              <IconSkill size={18} className="text-text-primary" />
+              <span className="text-[15px] font-medium text-text-primary">Skills</span>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {selectedSkills.map(id => (
+                <div
+                  key={id}
+                  className="flex items-center gap-2 pl-3 pr-2 py-2 rounded-xl bg-accent-muted text-[13px] text-text-primary"
                 >
-                  <IconX size={14} />
-                </button>
-              </div>
-            ))}
-            <button
-              onClick={openSkillsModal}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-border-subtle text-[13px] text-text-tertiary hover:text-text-secondary hover:border-border-default transition-colors"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              <span>Add</span>
-            </button>
+                  <span>{getSkillName(id)}</span>
+                  <button
+                    onClick={() => removeSkill(id)}
+                    className="p-1 rounded-full hover:bg-accent-muted text-text-tertiary hover:text-text-primary transition-colors"
+                  >
+                    <IconX size={14} />
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={openSkillsModal}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-full border border-dashed border-border-subtle text-[13px] text-text-tertiary hover:text-text-secondary hover:border-border-default transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                <span>Add</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </>
   );
 
@@ -567,7 +569,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
           )}
 
           {/* Input area */}
-          {renderInputSection(handleSubmit, handleKeyDown, isRunning)}
+          {renderInputSection(handleSubmit, handleKeyDown, isRunning, false)}
         </div>
       </div>
 

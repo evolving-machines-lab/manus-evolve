@@ -546,8 +546,6 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
               {displayMessages.map((message, index) => (
                 <div
                   key={message.id}
-                  className="animate-slide-up"
-                  style={{ animationDelay: `${index * 50}ms` }}
                 >
                   {message.role === 'user' ? (
                     /* User message - right aligned bubble */

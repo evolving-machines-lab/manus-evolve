@@ -151,7 +151,7 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
         <IconChevronDown
           size={14}
           className={cn(
-            "text-text-tertiary transition-transform duration-200 shrink-0",
+            "text-text-tertiary transition-transform duration-200 shrink-0 relative top-[3px]",
             isOpen && "rotate-180"
           )}
         />

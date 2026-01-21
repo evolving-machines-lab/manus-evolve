@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   IconX,
   IconFolder,
@@ -34,6 +34,11 @@ function IconOutput({ size = 20, className }: { size?: number; className?: strin
 export function RightPanelTabs({ project, task, onClose, defaultTab = 'browser' }: RightPanelTabsProps) {
   const { rightPanelView, setRightPanelView } = useStore();
   const [activeTab, setActiveTab] = useState<'files' | 'artifacts' | 'browser'>(defaultTab);
+
+  // Sync activeTab when defaultTab prop changes (e.g., clicking attachment icon)
+  useEffect(() => {
+    setActiveTab(defaultTab);
+  }, [defaultTab]);
 
   const handleTabChange = (tab: 'files' | 'artifacts' | 'browser') => {
     setActiveTab(tab);

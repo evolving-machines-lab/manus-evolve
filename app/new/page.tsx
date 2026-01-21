@@ -151,14 +151,12 @@ export default function NewProjectPage() {
   const handleCreate = async () => {
     const name = projectName.trim() || `Project ${Date.now()}`;
 
-    // Prepare files for API (include content)
-    const filesForApi = files.map(f => ({
+    // Prepare file metadata for API (without content - content uploaded separately)
+    const fileMetadata = files.map(f => ({
       name: f.name,
       path: f.path,
       type: f.type,
       size: f.size,
-      content: f.content,
-      isBase64: f.isBase64,
     }));
 
     try {
@@ -170,7 +168,7 @@ export default function NewProjectPage() {
           name,
           integrations: selectedIntegrations,
           skills: selectedSkills,
-          files: filesForApi,
+          files: fileMetadata,
         }),
       });
 
@@ -180,12 +178,26 @@ export default function NewProjectPage() {
 
       const createdProject = await response.json();
 
-      // Update store
-      addProject(createdProject);
-      setCurrentTask(null);
-      setCurrentProject(createdProject);
+      // Add files with content for frontend compatibility (content needed for context upload)
+      const project = {
+        ...createdProject,
+        files: files.map(f => ({
+          id: f.id,
+          name: f.name,
+          path: f.path,
+          type: f.type,
+          size: f.size,
+          content: f.content,
+          isBase64: f.isBase64,
+        })),
+      };
 
-      router.push(`/${createdProject.id}`);
+      // Update store
+      addProject(project);
+      setCurrentTask(null);
+      setCurrentProject(project);
+
+      router.push(`/${project.id}`);
     } catch (error) {
       console.error('Error creating project:', error);
     }

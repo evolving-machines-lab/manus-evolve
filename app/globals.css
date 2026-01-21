@@ -160,17 +160,15 @@ code, pre, .mono {
 /* ===== ANIMATIONS ===== */
 
 @keyframes fadeIn {
-  from { opacity: 0; }
+  from { opacity: 0.8; }
   to { opacity: 1; }
 }
 
 @keyframes slideUp {
   from {
-    opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(4px);
   }
   to {
-    opacity: 1;
     transform: translateY(0);
   }
 }

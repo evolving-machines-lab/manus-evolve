@@ -40,22 +40,32 @@ export default function NewProjectPage() {
   const [integrationSearch, setIntegrationSearch] = useState('');
   const [skillSearch, setSkillSearch] = useState('');
 
-  // Load integrations status on mount
+  // Load integrations status from API on mount
   useEffect(() => {
-    const stored = localStorage.getItem('swarmkit-integrations');
-    if (stored) {
+    const fetchIntegrations = async () => {
       try {
-        setIntegrations(JSON.parse(stored));
-      } catch (e) {
-        console.error('Failed to parse integrations:', e);
+        const response = await fetch('/api/integrations');
+        if (response.ok) {
+          const data = await response.json();
+          setIntegrations(data);
+        } else {
+          // Fallback to defaults
+          const initial: Integration[] = AVAILABLE_INTEGRATIONS.map((i) => ({
+            ...i,
+            connected: false,
+          }));
+          setIntegrations(initial);
+        }
+      } catch (error) {
+        console.error('Failed to fetch integrations:', error);
+        const initial: Integration[] = AVAILABLE_INTEGRATIONS.map((i) => ({
+          ...i,
+          connected: false,
+        }));
+        setIntegrations(initial);
       }
-    } else {
-      const initial: Integration[] = AVAILABLE_INTEGRATIONS.map((i) => ({
-        ...i,
-        connected: false,
-      }));
-      setIntegrations(initial);
-    }
+    };
+    fetchIntegrations();
   }, [setIntegrations]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -330,7 +340,12 @@ export default function NewProjectPage() {
                       i.displayName.toLowerCase().includes(integrationSearch.toLowerCase()) ||
                       i.description.toLowerCase().includes(integrationSearch.toLowerCase())
                     )
-                    .map((integration, index) => {
+                    .sort((a, b) => {
+                      const aConnected = integrations.find(i => i.id === a.id)?.connected ? 1 : 0;
+                      const bConnected = integrations.find(i => i.id === b.id)?.connected ? 1 : 0;
+                      return bConnected - aConnected; // Connected first
+                    })
+                    .map((integration) => {
                     const isSelected = selectedIntegrations.includes(integration.id);
                     const isConnected = integrations.find((i) => i.id === integration.id)?.connected;
 
@@ -353,7 +368,7 @@ export default function NewProjectPage() {
                         >
                           <IconPlug
                             size={18}
-                            className={isSelected ? 'text-accent' : 'text-text-tertiary'}
+                            className={isSelected ? 'text-accent' : isConnected ? 'text-success' : 'text-text-tertiary'}
                           />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -365,9 +380,9 @@ export default function NewProjectPage() {
                               {integration.displayName}
                             </p>
                             {isConnected && (
-                              <span className="text-2xs px-1.5 py-0.5 rounded bg-success-muted text-success font-medium">
-                                Active
-                              </span>
+                              <div className="w-4 h-4 rounded-full bg-success/20 flex items-center justify-center">
+                                <IconCheck size={10} className="text-success" />
+                              </div>
                             )}
                           </div>
                           <p className="text-2xs text-text-tertiary truncate mt-0.5">

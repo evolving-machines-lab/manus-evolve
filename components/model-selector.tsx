@@ -144,7 +144,7 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
           isOpen && "bg-[#2a2a2a]"
         )}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-baseline gap-2">
           <span className="text-[15px] font-medium text-text-primary">{currentAgent.name}</span>
           <span className="text-[13px] font-medium text-text-secondary">{currentModel?.displayName}</span>
         </div>

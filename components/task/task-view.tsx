@@ -558,45 +558,44 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                     </div>
                   ) : (
                     /* Assistant message - left aligned with branding */
-                    <div className="space-y-4">
+                    <div>
                       {/* Header with logo */}
-                      <div className="flex items-start gap-3">
-                        <IconLogo size={24} className="text-text-primary mt-0.5" />
-                        <div className="flex flex-col min-h-[44px]">
-                          <span className="text-[17px] font-semibold text-text-primary">manus</span>
-                          {/* Loading indicator - always reserve space, show/hide with opacity */}
-                          <span className={cn(
-                            "text-[14px] flex items-center gap-2 h-[20px] transition-opacity duration-150",
-                            taskStream.isRunning && index === displayMessages.length - 1
-                              ? "opacity-100 text-text-secondary"
-                              : "opacity-0"
-                          )}>
-                            <span className="text-accent text-[16px]">{spinnerChars[spinnerIndex]}</span>
-                            {funWords[funWordIndex]}
-                          </span>
-                        </div>
+                      <div className="flex items-center gap-3 mb-3">
+                        <IconLogo size={24} className="text-text-primary" />
+                        <span className="text-[17px] font-semibold text-text-primary">manus</span>
                       </div>
                       {/* Message content */}
                       <div className="prose prose-invert prose-sm max-w-none text-[15px] text-text-primary leading-relaxed">
                         <ReactMarkdown>{message.content}</ReactMarkdown>
                       </div>
+                      {/* Loading indicator - below content, only on last message while streaming */}
+                      {taskStream.isRunning && index === displayMessages.length - 1 && (
+                        <div className="mt-4">
+                          <span className="text-[16px] flex items-center gap-2.5">
+                            <span className="text-accent text-[20px]">{spinnerChars[spinnerIndex]}</span>
+                            <span className="text-text-secondary">{funWords[funWordIndex]}</span>
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               ))}
 
-              {/* Manus thinking indicator - shows when waiting for response */}
+              {/* Manus thinking indicator - shows when waiting for first response */}
               {taskStream.isRunning && displayMessages[displayMessages.length - 1]?.role === 'user' && (
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <IconLogo size={24} className="text-text-primary mt-0.5" />
-                    <div className="flex flex-col min-h-[44px]">
-                      <span className="text-[17px] font-semibold text-text-primary">manus</span>
-                      <span className="text-[14px] text-text-secondary flex items-center gap-2 h-[20px]">
-                        <span className="text-accent text-[16px]">{spinnerChars[spinnerIndex]}</span>
-                        {funWords[funWordIndex]}
-                      </span>
-                    </div>
+                <div>
+                  {/* Header with logo */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <IconLogo size={24} className="text-text-primary" />
+                    <span className="text-[17px] font-semibold text-text-primary">manus</span>
+                  </div>
+                  {/* Loading indicator - below header while waiting for content */}
+                  <div className="mt-2">
+                    <span className="text-[16px] flex items-center gap-2.5">
+                      <span className="text-accent text-[20px]">{spinnerChars[spinnerIndex]}</span>
+                      <span className="text-text-secondary">{funWords[funWordIndex]}</span>
+                    </span>
                   </div>
                 </div>
               )}

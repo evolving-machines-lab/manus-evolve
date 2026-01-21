@@ -69,10 +69,15 @@ export function SelectionModal({
     }
   };
 
+  // Filter and sort integrations - connected ones first
   const filteredIntegrations = AVAILABLE_INTEGRATIONS.filter(i =>
     i.displayName.toLowerCase().includes(search.toLowerCase()) ||
     i.description.toLowerCase().includes(search.toLowerCase())
-  );
+  ).sort((a, b) => {
+    const aConnected = integrations.find(i => i.id === a.id)?.connected ? 1 : 0;
+    const bConnected = integrations.find(i => i.id === b.id)?.connected ? 1 : 0;
+    return bConnected - aConnected; // Connected first
+  });
 
   const filteredSkillsByCategory = SKILL_CATEGORIES.map(category => ({
     ...category,
@@ -190,7 +195,7 @@ export function SelectionModal({
                     >
                       <IconPlug
                         size={18}
-                        className={isSelected ? 'text-accent' : 'text-text-tertiary'}
+                        className={isSelected ? 'text-accent' : isConnected ? 'text-success' : 'text-text-tertiary'}
                       />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -202,9 +207,9 @@ export function SelectionModal({
                           {integration.displayName}
                         </p>
                         {isConnected && (
-                          <span className="text-2xs px-1.5 py-0.5 rounded bg-success-muted text-success font-medium">
-                            Active
-                          </span>
+                          <div className="w-4 h-4 rounded-full bg-success/20 flex items-center justify-center">
+                            <IconCheck size={10} className="text-success" />
+                          </div>
                         )}
                       </div>
                       <p className="text-2xs text-text-tertiary truncate mt-0.5">

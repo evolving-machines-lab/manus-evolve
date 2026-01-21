@@ -43,7 +43,7 @@ export function RightPanelTabs({ project, task, onClose, defaultTab = 'browser' 
   const tabs = [
     { id: 'files' as const, label: 'Files', icon: IconFolder },
     { id: 'artifacts' as const, label: 'Artifacts', icon: IconOutput },
-    { id: 'browser' as const, label: 'Browser', icon: IconMonitor },
+    { id: 'browser' as const, label: 'Computer', icon: IconMonitor },
   ];
 
   return (
@@ -107,30 +107,30 @@ export function RightPanelTabs({ project, task, onClose, defaultTab = 'browser' 
           )}
         </div>
 
-        {/* Task progress section at bottom */}
+        {/* Task progress section at bottom - matches preview panel styling */}
         {task && task.progress.length > 0 && (
           <div className="p-4 pt-0">
-            <div className="rounded-2xl border border-[#444444] bg-[#363636] p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-[16px] font-medium text-text-primary">Task progress</h3>
+            <div className="rounded-2xl border border-[#444444] bg-[#363636] p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[15px] font-medium text-text-primary">Task progress</h3>
                 <span className="text-[13px] text-text-tertiary">
                   {task.progress.filter(p => p.status === 'completed').length} / {task.progress.length}
                 </span>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {task.progress.map((item) => (
                   <div key={item.id} className="flex items-start gap-3">
                     {item.status === 'completed' ? (
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-green-500 mt-0.5 flex-shrink-0">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-green-500 mt-0.5 flex-shrink-0">
                         <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     ) : item.status === 'in_progress' ? (
-                      <div className="w-[18px] h-[18px] rounded-full border-2 border-accent border-t-transparent animate-spin mt-0.5 flex-shrink-0" />
+                      <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin mt-0.5 flex-shrink-0" />
                     ) : (
-                      <div className="w-[18px] h-[18px] rounded-full border border-text-quaternary mt-0.5 flex-shrink-0" />
+                      <div className="w-5 h-5 rounded-full border border-text-quaternary mt-0.5 flex-shrink-0" />
                     )}
                     <span className={cn(
-                      'text-[14px] leading-relaxed',
+                      'text-[13px] leading-relaxed',
                       item.status === 'completed' ? 'text-text-primary' :
                       item.status === 'in_progress' ? 'text-text-primary' :
                       'text-text-tertiary'

@@ -143,6 +143,18 @@ function ensureTablesExist() {
       uploaded_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- Task Context Files (for standalone tasks)
+    CREATE TABLE IF NOT EXISTS task_context_files (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      path TEXT NOT NULL,
+      type TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      content BLOB,
+      uploaded_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     -- Integrations (Catalog)
     CREATE TABLE IF NOT EXISTS integrations (
       id TEXT PRIMARY KEY,
@@ -254,8 +266,28 @@ function seedIntegrations() {
   }
 }
 
+// Ensure new tables exist (for migrations)
+function ensureNewTables() {
+  if (!tableExists('task_context_files')) {
+    console.log('Creating task_context_files table...');
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS task_context_files (
+        id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        path TEXT NOT NULL,
+        type TEXT NOT NULL,
+        size INTEGER NOT NULL,
+        content BLOB,
+        uploaded_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+    `);
+  }
+}
+
 // Initialize database on module load
 ensureTablesExist();
+ensureNewTables();
 ensureDefaultUser();
 seedSkills();
 seedIntegrations();

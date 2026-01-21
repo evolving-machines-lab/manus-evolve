@@ -56,9 +56,10 @@ export async function POST(
   const prompt = body.prompt || task.prompt;
   const timeoutMs = body.timeoutMs || 60 * 60 * 1000; // Default 1 hour
 
-  // Get project files if task belongs to a project
+  // Get context files - either from project or from task
   let contextFiles: FileMap = {};
   if (task.projectId) {
+    // Project-based task: get project files
     const project = await db.query.projects.findFirst({
       where: eq(projects.id, task.projectId!),
       with: {
@@ -68,6 +69,25 @@ export async function POST(
     if (project?.files) {
       contextFiles = prepareContextFiles(
         project.files.map((f) => ({
+          name: f.name,
+          path: f.path,
+          content: f.content
+            ? (typeof f.content === 'string' ? f.content : Buffer.from(f.content as Buffer).toString())
+            : undefined,
+        }))
+      );
+    }
+  } else {
+    // Standalone task: get task context files
+    const taskWithFiles = await db.query.tasks.findFirst({
+      where: eq(tasks.id, taskId),
+      with: {
+        contextFiles: true,
+      },
+    });
+    if (taskWithFiles?.contextFiles) {
+      contextFiles = prepareContextFiles(
+        taskWithFiles.contextFiles.map((f) => ({
           name: f.name,
           path: f.path,
           content: f.content

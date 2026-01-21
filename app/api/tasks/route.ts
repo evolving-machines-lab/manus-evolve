@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, tasks, messages, progressItems, taskIntegrations, taskSkills, projects, DEFAULT_USER_ID } from '@/lib/db';
+import { db, tasks, messages, progressItems, taskIntegrations, taskSkills, taskContextFiles, projects, DEFAULT_USER_ID } from '@/lib/db';
 import { eq, isNull, and } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import type { AgentType, TaskStatus } from '@/lib/db/schema';
@@ -116,6 +116,7 @@ export async function POST(request: NextRequest) {
       model,
       integrations: integrationIds,
       skills: skillIds,
+      contextFiles,
     } = body;
 
     if (!prompt || !agent || !model) {
@@ -191,6 +192,33 @@ export async function POST(request: NextRequest) {
         db.insert(taskSkills).values({
           taskId,
           skillId,
+        }).run();
+      }
+    }
+
+    // Add context files
+    if (contextFiles && contextFiles.length > 0) {
+      for (const file of contextFiles) {
+        let content: Buffer | null = null;
+        if (file.content) {
+          if (file.isBase64) {
+            // Decode base64-encoded binary content
+            content = Buffer.from(file.content, 'base64');
+          } else if (typeof file.content === 'string') {
+            // Text content
+            content = Buffer.from(file.content, 'utf-8');
+          }
+        }
+
+        db.insert(taskContextFiles).values({
+          id: nanoid(),
+          taskId,
+          name: file.name,
+          path: file.path || file.name,
+          type: file.type || 'application/octet-stream',
+          size: content?.length || 0,
+          content,
+          uploadedAt: now,
         }).run();
       }
     }

@@ -4,11 +4,19 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { SelectionModal } from '@/components/selection-modal';
 import { ModelSelector, type ModelSelection } from '@/components/model-selector';
-import { IconAttach, IconPlug, IconMic, IconSkill, IconX } from '@/components/ui/icons';
+import { IconAttach, IconPlug, IconMic, IconSkill, IconX, IconFile } from '@/components/ui/icons';
 import { useStore } from '@/lib/store';
 import { generateId, cn } from '@/lib/utils';
 import { AVAILABLE_INTEGRATIONS } from '@/lib/integrations';
 import { AVAILABLE_SKILLS } from '@/lib/skills';
+
+interface AttachedFile {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  content: string | ArrayBuffer;
+}
 
 export default function HomePage() {
   const router = useRouter();
@@ -19,7 +27,9 @@ export default function HomePage() {
   const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [modelSelection, setModelSelection] = useState<ModelSelection>({ agent: 'claude', model: 'opus' });
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -49,6 +59,17 @@ export default function HomePage() {
     const prompt = input.trim();
     setInput(''); // Clear input immediately
 
+    // Prepare context files from attachments (encode binary as base64)
+    const contextFiles = attachedFiles.map(f => ({
+      name: f.name,
+      path: f.name,
+      type: f.type,
+      content: typeof f.content === 'string'
+        ? f.content
+        : arrayBufferToBase64(f.content as ArrayBuffer),
+      isBase64: typeof f.content !== 'string',
+    }));
+
     try {
       // Create task via API
       const response = await fetch('/api/tasks', {
@@ -62,6 +83,7 @@ export default function HomePage() {
           model: modelSelection.model,
           integrations: selectedIntegrations,
           skills: selectedSkills,
+          contextFiles,
         }),
       });
 
@@ -94,6 +116,9 @@ export default function HomePage() {
       addTask(newTask);
       setCurrentTask(newTask);
 
+      // Clear attached files
+      setAttachedFiles([]);
+
       // Navigate to task page (which will start the agent)
       router.push(`/task/${createdTask.id}`);
     } catch (error) {
@@ -125,6 +150,72 @@ export default function HomePage() {
 
   const removeSkill = (id: string) => {
     setSelectedSkills(prev => prev.filter(s => s !== id));
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const newFiles: AttachedFile[] = [];
+    for (const file of Array.from(files)) {
+      const content = await readFileContent(file);
+      newFiles.push({
+        id: generateId(),
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        content,
+      });
+    }
+    setAttachedFiles(prev => [...prev, ...newFiles]);
+
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const readFileContent = (file: File): Promise<string | ArrayBuffer> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.result) {
+          resolve(reader.result);
+        } else {
+          reject(new Error('Failed to read file'));
+        }
+      };
+      reader.onerror = () => reject(reader.error);
+
+      // Read text files as text, binary files as ArrayBuffer
+      const textTypes = ['text/', 'application/json', 'application/javascript', 'application/xml'];
+      const isText = textTypes.some(t => file.type.startsWith(t)) || file.name.match(/\.(txt|md|csv|json|js|ts|tsx|jsx|py|html|css|yaml|yml|xml|env|gitignore|sh|bash)$/i);
+
+      if (isText) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
+    });
+  };
+
+  const removeFile = (id: string) => {
+    setAttachedFiles(prev => prev.filter(f => f.id !== id));
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
   };
 
   const getIntegrationName = (id: string) => {
@@ -172,9 +263,21 @@ export default function HomePage() {
             {/* Bottom toolbar */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
                 <button
-                  className="w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle btn-bordered flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors"
-                  title="Attach files (select project first)"
+                  onClick={() => fileInputRef.current?.click()}
+                  className={cn(
+                    "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle btn-bordered flex items-center justify-center transition-colors",
+                    attachedFiles.length > 0 ? "text-accent" : "text-text-tertiary hover:text-text-secondary"
+                  )}
+                  title="Attach files"
                 >
                   <IconAttach size={18} />
                 </button>
@@ -223,6 +326,33 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+
+          {/* Attached Files */}
+          {attachedFiles.length > 0 && (
+            <div className="mt-6">
+              <div className="flex items-center gap-2 mb-3">
+                <IconFile size={18} className="text-text-primary" />
+                <span className="text-[15px] font-medium text-text-primary">Attached Files</span>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {attachedFiles.map(file => (
+                  <div
+                    key={file.id}
+                    className="flex items-center gap-2 pl-3 pr-2 py-2 rounded-xl bg-bg-overlay text-[13px] text-text-primary"
+                  >
+                    <span className="truncate max-w-[200px]">{file.name}</span>
+                    <span className="text-text-tertiary text-[11px]">{formatFileSize(file.size)}</span>
+                    <button
+                      onClick={() => removeFile(file.id)}
+                      className="p-1 rounded-full hover:bg-bg-subtle text-text-tertiary hover:text-text-primary transition-colors"
+                    >
+                      <IconX size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Integrations and Skills side by side */}
           <div className="mt-12 flex gap-8">

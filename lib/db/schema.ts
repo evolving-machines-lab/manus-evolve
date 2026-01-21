@@ -133,6 +133,18 @@ export const projectFiles = sqliteTable('project_files', {
   uploadedAt: text('uploaded_at').notNull().default(new Date().toISOString()),
 });
 
+// 8b. Task Context Files (for standalone tasks)
+export const taskContextFiles = sqliteTable('task_context_files', {
+  id: text('id').primaryKey(),
+  taskId: text('task_id').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  path: text('path').notNull(),
+  type: text('type').notNull(),
+  size: integer('size').notNull(),
+  content: blob('content'), // For small files
+  uploadedAt: text('uploaded_at').notNull().default(new Date().toISOString()),
+});
+
 // 9. Integrations (Reference/Catalog)
 export const integrations = sqliteTable('integrations', {
   id: text('id').primaryKey(),
@@ -217,6 +229,7 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
   artifacts: many(artifacts),
   integrations: many(taskIntegrations),
   skills: many(taskSkills),
+  contextFiles: many(taskContextFiles),
 }));
 
 export const messagesRelations = relations(messages, ({ one, many }) => ({
@@ -238,6 +251,10 @@ export const artifactsRelations = relations(artifacts, ({ one }) => ({
 
 export const projectFilesRelations = relations(projectFiles, ({ one }) => ({
   project: one(projects, { fields: [projectFiles.projectId], references: [projects.id] }),
+}));
+
+export const taskContextFilesRelations = relations(taskContextFiles, ({ one }) => ({
+  task: one(tasks, { fields: [taskContextFiles.taskId], references: [tasks.id] }),
 }));
 
 export const integrationsRelations = relations(integrations, ({ many }) => ({

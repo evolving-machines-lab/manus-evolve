@@ -132,8 +132,8 @@ export default function SettingsPage() {
     <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="h-14 px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <IconPlug size={18} className="text-text-tertiary" />
+          <div className="flex items-baseline gap-3">
+            <IconPlug size={18} className="text-text-tertiary relative top-[2px]" />
             <h1 className="text-[15px] font-semibold text-text-primary">Integrations</h1>
             <span className="text-[13px] text-text-tertiary">
               {connectedCount > 0 && (

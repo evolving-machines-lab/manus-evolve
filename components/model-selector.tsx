@@ -149,9 +149,9 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
           <span className="text-[13px] font-medium text-text-secondary">{currentModel?.displayName}</span>
         </div>
         <IconChevronDown
-          size={14}
+          size={16}
           className={cn(
-            "text-text-tertiary transition-transform duration-200 shrink-0 relative top-[3px]",
+            "text-text-tertiary transition-transform duration-200 shrink-0 relative top-[1px]",
             isOpen && "rotate-180"
           )}
         />

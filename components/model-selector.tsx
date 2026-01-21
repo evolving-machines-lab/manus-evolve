@@ -164,14 +164,21 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
         />
       </button>
 
+      {/* Backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40"
+          onClick={() => {
+            setIsOpen(false);
+            setExpandedAgent(null);
+          }}
+        />
+      )}
+
       {/* Dropdown */}
       {isOpen && (
         <div
-          className={cn(
-            "absolute top-full left-0 mt-2 rounded-2xl border border-white/[0.08] bg-[#1a1a1a] shadow-2xl z-50 overflow-hidden",
-            "transition-all duration-200",
-            expandedAgent ? "w-[320px]" : "w-[220px]"
-          )}
+          className="absolute top-full left-0 mt-2 w-[240px] rounded-2xl border border-white/[0.08] bg-[#1a1a1a] shadow-2xl z-50 overflow-hidden"
         >
           <div className="p-2">
             {AGENT_TYPES.map((agent) => {

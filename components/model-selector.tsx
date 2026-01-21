@@ -86,7 +86,6 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
 
   const currentAgent = AGENT_TYPES.find(a => a.id === selection.agent) || AGENT_TYPES[0];
   const currentModel = currentAgent.models.find(m => m.model === selection.model);
-  const isDefaultModel = currentModel?.isDefault;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -134,10 +133,6 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
     setExpandedAgent(null);
   };
 
-  const displayName = isDefaultModel
-    ? currentAgent.name
-    : `${currentAgent.name} · ${currentModel?.displayName || ''}`;
-
   return (
     <div ref={dropdownRef} className="relative">
       {/* Trigger button */}
@@ -147,17 +142,20 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
           if (!isOpen) setExpandedAgent(null);
         }}
         className={cn(
-          "flex items-center justify-between gap-2 w-[140px] px-4 py-2.5 rounded-2xl text-[15px] font-medium transition-all duration-200",
+          "flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all duration-200",
           "bg-bg-surface/80 backdrop-blur-sm hover:bg-bg-overlay border border-white/[0.06]",
           "shadow-[0_2px_8px_rgba(0,0,0,0.12)]",
           isOpen && "bg-bg-overlay border-white/[0.1]"
         )}
       >
-        <span className="text-text-primary truncate">{displayName}</span>
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-[15px] font-medium text-text-primary">{currentAgent.name}</span>
+          <span className="text-[11px] text-text-tertiary">{currentModel?.displayName}</span>
+        </div>
         <IconChevronDown
-          size={16}
+          size={14}
           className={cn(
-            "text-text-tertiary transition-transform duration-200",
+            "text-text-tertiary transition-transform duration-200 shrink-0",
             isOpen && "rotate-180"
           )}
         />

@@ -129,7 +129,13 @@ textarea::placeholder {
 button {
   font-family: inherit;
   cursor: pointer;
+  border: none;
   background: none;
+}
+
+/* Buttons that need visible borders */
+.btn-bordered {
+  border: 1px solid #444444 !important;
 }
 
 /* Code/mono */

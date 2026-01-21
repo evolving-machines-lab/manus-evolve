@@ -30,34 +30,44 @@ export default function ProjectPage() {
   const [defaultTab, setDefaultTab] = useState<'files' | 'artifacts' | 'browser'>('browser');
 
   useEffect(() => {
-    const storedProjects = localStorage.getItem('swarmkit-projects');
-    if (storedProjects) {
-      const parsed: Project[] = JSON.parse(storedProjects);
-      setProjects(parsed);
+    const loadProject = async () => {
+      // Load projects from localStorage
+      const storedProjects = localStorage.getItem('swarmkit-projects');
+      if (storedProjects) {
+        const parsed: Project[] = JSON.parse(storedProjects);
+        setProjects(parsed);
 
-      const project = parsed.find((p) => p.id === projectId);
-      if (project) {
-        setCurrentProject(project);
+        const project = parsed.find((p) => p.id === projectId);
+        if (project) {
+          setCurrentProject(project);
+        } else {
+          router.push('/');
+          return;
+        }
       } else {
         router.push('/');
         return;
       }
-    } else {
-      router.push('/');
-      return;
-    }
 
-    const storedTasks = localStorage.getItem(`swarmkit-tasks-${projectId}`);
-    if (storedTasks) {
-      const parsed: Task[] = JSON.parse(storedTasks);
-      setTasks(parsed);
-      // Don't auto-select a task - let user click on one or start a new chat
-    } else {
-      setTasks([]);
-    }
+      // Fetch project tasks from API
+      try {
+        const response = await fetch(`/api/tasks?projectId=${projectId}`);
+        if (response.ok) {
+          const projectTasks: Task[] = await response.json();
+          setTasks(projectTasks);
+        } else {
+          setTasks([]);
+        }
+      } catch (error) {
+        console.error('Error fetching project tasks:', error);
+        setTasks([]);
+      }
 
-    setLoading(false);
-  }, [projectId, router, setProjects, setCurrentProject, setTasks, setCurrentTask, currentTask]);
+      setLoading(false);
+    };
+
+    loadProject();
+  }, [projectId, router, setProjects, setCurrentProject, setTasks]);
 
   const handleOpenPanel = (tab: 'files' | 'artifacts' | 'browser' = 'browser') => {
     setDefaultTab(tab);

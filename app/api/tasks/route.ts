@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, tasks, messages, progressItems, taskIntegrations, taskSkills } from '@/lib/db';
+import { db, tasks, messages, progressItems, taskIntegrations, taskSkills, projects } from '@/lib/db';
 import { eq, isNull, and } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import type { AgentType, TaskStatus } from '@/lib/db/schema';
@@ -116,10 +116,32 @@ export async function POST(request: NextRequest) {
     const taskId = nanoid();
     const now = new Date().toISOString();
 
+    // If projectId is provided (not standalone), ensure project exists in database
+    const effectiveProjectId = projectId === 'standalone' ? null : projectId || null;
+
+    if (effectiveProjectId) {
+      // Check if project exists
+      const existingProject = await db.query.projects.findFirst({
+        where: eq(projects.id, effectiveProjectId),
+      });
+
+      // If project doesn't exist, create it
+      if (!existingProject) {
+        db.insert(projects).values({
+          id: effectiveProjectId,
+          userId: DEFAULT_USER_ID,
+          name: body.projectName || 'Untitled Project',
+          description: null,
+          createdAt: now,
+          updatedAt: now,
+        }).run();
+      }
+    }
+
     // Create task
     db.insert(tasks).values({
       id: taskId,
-      projectId: projectId === 'standalone' ? null : projectId || null,
+      projectId: effectiveProjectId,
       userId: DEFAULT_USER_ID,
       title: title || prompt.slice(0, 50),
       prompt,

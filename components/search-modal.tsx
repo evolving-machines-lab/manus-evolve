@@ -219,7 +219,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-[#202020] border border-border-subtle rounded-2xl shadow-2xl overflow-hidden"
+        className="w-full max-w-2xl bg-[#2f2f2f] border border-[#4a4a4a] rounded-2xl shadow-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Search input */}

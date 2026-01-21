@@ -266,11 +266,11 @@ function IntegrationCard({
   return (
     <div
       className={cn(
-        'group flex items-center gap-4 p-4 rounded-xl border transition-all duration-150',
+        'group flex items-center gap-4 p-4 rounded-xl transition-all duration-150',
         'animate-slide-up',
         integration.connected
-          ? 'bg-success-muted border-success/20'
-          : 'bg-bg-surface border-border-subtle hover:border-border-default hover:bg-bg-overlay'
+          ? 'bg-success-muted'
+          : 'bg-bg-surface hover:bg-bg-overlay'
       )}
       style={{ animationDelay: `${delay}ms` }}
     >

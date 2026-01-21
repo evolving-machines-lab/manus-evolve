@@ -38,6 +38,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
   const [showSelectionModal, setShowSelectionModal] = useState(false);
   const [modalTab, setModalTab] = useState<'integrations' | 'skills'>('integrations');
   const [modelSelection, setModelSelection] = useState<ModelSelection>({ agent: 'claude', model: 'opus' });
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
 
   // Initialize with project defaults
   const [selectedIntegrations, setSelectedIntegrations] = useState<string[]>(
@@ -170,13 +171,16 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
 
   const completedSteps = displayProgress.filter((p) => p.status === 'completed').length || 0;
   const totalSteps = displayProgress.length || 0;
-  const isRunning = taskStream.isRunning || task?.status === 'running';
+  const isRunning = isCreatingTask || taskStream.isRunning || task?.status === 'running';
 
   const handleCreateTask = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isCreatingTask) return;
 
     const projectId = project?.id || 'standalone';
     const prompt = input.trim();
+
+    setIsCreatingTask(true);
+    setInput('');
 
     try {
       // Create task via API
@@ -185,6 +189,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectId,
+          projectName: project?.name,
           title: prompt.slice(0, 50),
           prompt,
           agent: modelSelection.agent,
@@ -206,7 +211,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
         projectId,
         title: createdTask.title,
         prompt: createdTask.prompt,
-        status: 'pending',
+        status: 'running',
         messages: createdTask.messages || [],
         progress: [],
         artifacts: [],
@@ -221,12 +226,14 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
       addTask(newTask);
       setCurrentTask(newTask);
 
-      setInput('');
-
-      // Run the task with streaming
-      await taskStream.runTask(newTask.id);
+      // Mark as auto-started and run immediately
+      hasAutoStartedRef.current = newTask.id;
+      taskStream.runTask(newTask.id);
     } catch (error) {
       console.error('Error creating task:', error);
+      setInput(prompt); // Restore input on error
+    } finally {
+      setIsCreatingTask(false);
     }
   };
 
@@ -285,14 +292,14 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
           <div className="flex items-center gap-2">
             <button
               onClick={() => onOpenPanel?.('files')}
-              className="w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle border border-[#444444] flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors"
+              className="w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle btn-bordered flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors"
             >
               <IconAttach size={18} />
             </button>
             <button
               onClick={openIntegrationsModal}
               className={cn(
-                "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle border border-[#444444] flex items-center justify-center transition-colors",
+                "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle btn-bordered flex items-center justify-center transition-colors",
                 selectedIntegrations.length > 0 ? "text-accent" : "text-text-tertiary hover:text-text-secondary"
               )}
               title="Select integrations"
@@ -302,7 +309,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
             <button
               onClick={openSkillsModal}
               className={cn(
-                "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle border border-[#444444] flex items-center justify-center transition-colors",
+                "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle btn-bordered flex items-center justify-center transition-colors",
                 selectedSkills.length > 0 ? "text-accent" : "text-text-tertiary hover:text-text-secondary"
               )}
               title="Select skills"
@@ -439,7 +446,15 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
               What can I help you with?
             </h1>
 
-            {renderInputSection(handleCreateTask, handleEmptyKeyDown)}
+            {renderInputSection(handleCreateTask, handleEmptyKeyDown, isCreatingTask)}
+
+            {/* Loading indicator while creating task */}
+            {isCreatingTask && (
+              <div className="mt-6 flex items-center justify-center gap-3">
+                <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+                <span className="text-[14px] text-text-secondary">Starting task...</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -481,9 +496,9 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
           const agentType = AGENT_TYPES.find(a => a.id === task.agent) || AGENT_TYPES[0];
           const model = agentType.models.find(m => m.model === task.model) || agentType.models.find(m => m.isDefault);
           return (
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl">
+            <div className="flex items-baseline gap-2 px-3 py-2.5 rounded-xl">
               <span className="text-[15px] font-medium text-text-primary">{agentType.name}</span>
-              <span className="text-[13px] font-medium text-text-secondary">{model?.displayName}</span>
+              <span className="text-[12px] font-medium text-text-secondary">{model?.displayName}</span>
             </div>
           );
         })()}
@@ -519,10 +534,10 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                     /* Assistant message - left aligned with branding */
                     <div className="space-y-3">
                       {/* Header with logo and model badge */}
-                      <div className="flex items-center gap-2">
-                        <IconLogo size={22} className="text-text-primary" />
+                      <div className="flex items-baseline gap-2">
+                        <IconLogo size={22} className="text-text-primary self-center" />
                         <span className="text-[16px] font-semibold text-text-primary">manus</span>
-                        <span className="text-[12px] px-2 py-0.5 rounded-md bg-[#2a2a2a] text-text-tertiary border border-border-subtle">
+                        <span className="text-[11px] px-2 py-0.5 rounded-md bg-[#2a2a2a] text-text-tertiary border border-border-subtle translate-y-[-1px]">
                           {(() => {
                             const agentType = AGENT_TYPES.find(a => a.id === task?.agent) || AGENT_TYPES[0];
                             const model = agentType.models.find(m => m.model === task?.model) || agentType.models.find(m => m.isDefault);

@@ -173,7 +173,7 @@ export default function HomePage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <button
-                  className="w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle border border-[#444444] flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors"
+                  className="w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle btn-bordered flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors"
                   title="Attach files (select project first)"
                 >
                   <IconAttach size={18} />
@@ -181,7 +181,7 @@ export default function HomePage() {
                 <button
                   onClick={openIntegrationsModal}
                   className={cn(
-                    "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle border border-[#444444] flex items-center justify-center transition-colors",
+                    "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle btn-bordered flex items-center justify-center transition-colors",
                     selectedIntegrations.length > 0 ? "text-accent" : "text-text-tertiary hover:text-text-secondary"
                   )}
                   title="Select integrations"
@@ -191,7 +191,7 @@ export default function HomePage() {
                 <button
                   onClick={openSkillsModal}
                   className={cn(
-                    "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle border border-[#444444] flex items-center justify-center transition-colors",
+                    "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle btn-bordered flex items-center justify-center transition-colors",
                     selectedSkills.length > 0 ? "text-accent" : "text-text-tertiary hover:text-text-secondary"
                   )}
                   title="Select skills"

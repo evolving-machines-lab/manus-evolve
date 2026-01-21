@@ -329,11 +329,11 @@ export default function NewProjectPage() {
                         key={integration.id}
                         onClick={() => toggleIntegration(integration.id)}
                         className={cn(
-                          'group flex items-center gap-3 p-4 rounded-xl border text-left transition-all duration-150',
+                          'group flex items-center gap-3 p-4 rounded-xl text-left transition-all duration-150',
                           'animate-slide-up',
                           isSelected
-                            ? 'bg-accent-subtle border-accent/50'
-                            : 'bg-bg-surface border-border-subtle hover:border-border-default hover:bg-bg-overlay'
+                            ? 'bg-accent-subtle border border-accent/50'
+                            : 'bg-bg-surface hover:bg-bg-overlay'
                         )}
                         style={{ animationDelay: `${index * 30}ms` }}
                       >
@@ -434,10 +434,10 @@ export default function NewProjectPage() {
                               key={skill.id}
                               onClick={() => toggleSkill(skill.id)}
                               className={cn(
-                                'group flex items-center gap-3 p-4 rounded-xl border text-left transition-all duration-150',
+                                'group flex items-center gap-3 p-4 rounded-xl text-left transition-all duration-150',
                                 isSelected
-                                  ? 'bg-accent-subtle border-accent/50'
-                                  : 'bg-bg-surface border-border-subtle hover:border-border-default hover:bg-bg-overlay'
+                                  ? 'bg-accent-subtle border border-accent/50'
+                                  : 'bg-bg-surface hover:bg-bg-overlay'
                               )}
                             >
                               <div

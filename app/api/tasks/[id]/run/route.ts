@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db, tasks, messages, progressItems, toolCalls } from '@/lib/db';
+import { db, tasks, messages, progressItems, toolCalls, projects } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import {
@@ -62,7 +62,7 @@ export async function POST(
   let contextFiles: FileMap = {};
   if (task.projectId) {
     const project = await db.query.projects.findFirst({
-      where: eq(tasks.projectId!, task.projectId),
+      where: eq(projects.id, task.projectId!),
       with: {
         files: true,
       },

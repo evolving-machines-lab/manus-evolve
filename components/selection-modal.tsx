@@ -91,7 +91,7 @@ export function SelectionModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-5xl bg-[#202020] border border-border-subtle rounded-2xl shadow-2xl overflow-hidden"
+        className="w-full max-w-5xl bg-[#2f2f2f] border border-[#4a4a4a] rounded-2xl shadow-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header with tabs and search */}
@@ -176,10 +176,10 @@ export function SelectionModal({
                     key={integration.id}
                     onClick={() => toggleIntegration(integration.id)}
                     className={cn(
-                      'group flex items-center gap-3 p-4 rounded-xl border text-left transition-all duration-150',
+                      'group flex items-center gap-3 p-4 rounded-xl text-left transition-all duration-150',
                       isSelected
-                        ? 'bg-accent-subtle border-accent/50'
-                        : 'bg-bg-surface border-border-subtle hover:border-border-default hover:bg-[#2a2a2a]'
+                        ? 'bg-accent-subtle border border-accent/50'
+                        : 'bg-bg-surface hover:bg-[#2a2a2a]'
                     )}
                   >
                     <div
@@ -239,10 +239,10 @@ export function SelectionModal({
                           key={skill.id}
                           onClick={() => toggleSkill(skill.id)}
                           className={cn(
-                            'group flex items-center gap-3 p-4 rounded-xl border text-left transition-all duration-150',
+                            'group flex items-center gap-3 p-4 rounded-xl text-left transition-all duration-150',
                             isSelected
-                              ? 'bg-accent-subtle border-accent/50'
-                              : 'bg-bg-surface border-border-subtle hover:border-border-default hover:bg-[#2a2a2a]'
+                              ? 'bg-accent-subtle border border-accent/50'
+                              : 'bg-bg-surface hover:bg-[#2a2a2a]'
                           )}
                         >
                           <div

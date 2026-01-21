@@ -584,6 +584,24 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                 </div>
               ))}
 
+              {/* Manus thinking indicator - shows when waiting for response */}
+              {taskStream.isRunning && displayMessages[displayMessages.length - 1]?.role === 'user' && (
+                <div className="animate-slide-up">
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-2">
+                      <IconLogo size={22} className="text-text-primary mt-0.5" />
+                      <div className="flex flex-col">
+                        <span className="text-[16px] font-semibold text-text-primary">manus</span>
+                        <span className="text-[12px] text-text-tertiary flex items-center gap-1.5">
+                          <span className="text-accent">{spinnerChars[spinnerIndex]}</span>
+                          {funWords[funWordIndex]}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Task completed indicator */}
               {task?.status === 'completed' && !taskStream.isRunning && (
                 <div className="flex items-center gap-2 mt-4">

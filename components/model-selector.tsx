@@ -117,9 +117,16 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, expandedAgent]);
 
-  const handleAgentClick = (agent: AgentType) => {
-    // Toggle expand/collapse
-    setExpandedAgent(expandedAgent === agent.id ? null : agent.id);
+  const handleAgentSelect = (agent: AgentType) => {
+    // Select agent with default model
+    onSelectionChange({ agent: agent.id, model: agent.defaultModel });
+    setIsOpen(false);
+    setExpandedAgent(null);
+  };
+
+  const handleToggleExpand = (e: React.MouseEvent, agentId: string) => {
+    e.stopPropagation();
+    setExpandedAgent(expandedAgent === agentId ? null : agentId);
   };
 
   const handleModelSelect = (agent: AgentType, model: AgentModel) => {
@@ -174,10 +181,9 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
               return (
                 <div key={agent.id} className="mb-0.5 last:mb-0">
                   {/* Agent row */}
-                  <button
-                    onClick={() => handleAgentClick(agent)}
+                  <div
                     className={cn(
-                      "flex items-center w-full px-3 py-3 rounded-xl text-left transition-all duration-150",
+                      "flex items-center rounded-xl transition-all duration-150",
                       isExpanded
                         ? "bg-white/[0.08]"
                         : isSelected
@@ -185,32 +191,42 @@ export function ModelSelector({ selection, onSelectionChange }: ModelSelectorPro
                           : "hover:bg-white/[0.05]"
                     )}
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={cn(
-                          "text-[14px] font-medium",
-                          isSelected ? "text-white" : "text-text-secondary"
-                        )}>
-                          {agent.name}
-                        </span>
-                        <span className="text-[11px] text-text-quaternary">
-                          {agent.provider}
-                        </span>
+                    <button
+                      onClick={() => handleAgentSelect(agent)}
+                      className="flex-1 flex items-center px-3 py-3 text-left"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={cn(
+                            "text-[14px] font-medium",
+                            isSelected ? "text-white" : "text-text-secondary"
+                          )}>
+                            {agent.name}
+                          </span>
+                          <span className="text-[11px] text-text-quaternary">
+                            {agent.provider}
+                          </span>
+                        </div>
                       </div>
-                    </div>
 
-                    {isSelected && !isExpanded && (
-                      <IconCheck size={16} className="text-accent shrink-0" />
-                    )}
-
-                    <IconChevronDown
-                      size={14}
-                      className={cn(
-                        "text-text-quaternary ml-2 transition-transform duration-200",
-                        isExpanded && "rotate-180"
+                      {isSelected && !isExpanded && (
+                        <IconCheck size={16} className="text-accent shrink-0" />
                       )}
-                    />
-                  </button>
+                    </button>
+
+                    <button
+                      onClick={(e) => handleToggleExpand(e, agent.id)}
+                      className="p-2 mr-1 rounded-lg hover:bg-white/[0.08] transition-colors"
+                    >
+                      <IconChevronDown
+                        size={14}
+                        className={cn(
+                          "text-text-quaternary transition-transform duration-200",
+                          isExpanded && "rotate-180"
+                        )}
+                      />
+                    </button>
+                  </div>
 
                   {/* Models dropdown */}
                   <div className={cn(

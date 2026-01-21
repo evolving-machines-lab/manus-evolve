@@ -320,7 +320,11 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
           <div className="flex items-center gap-2">
             <button
               onClick={() => onOpenPanel?.('files')}
-              className="w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle btn-bordered flex items-center justify-center text-text-tertiary hover:text-text-secondary transition-colors"
+              className={cn(
+                "w-10 h-10 rounded-full bg-bg-overlay hover:bg-bg-subtle btn-bordered flex items-center justify-center transition-colors",
+                project?.files && project.files.length > 0 ? "text-accent" : "text-text-tertiary hover:text-text-secondary"
+              )}
+              title="View files"
             >
               <IconAttach size={18} />
             </button>

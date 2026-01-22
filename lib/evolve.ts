@@ -267,8 +267,8 @@ export function setupEventHandlers(evolve: Evolve, callbacks: EvolveCallbacks): 
               textParts.push(c);
             }
             // Handle { text: "..." } directly
-            else if (c.text && typeof c.text === 'string') {
-              textParts.push(c.text);
+            else if ('text' in c && typeof (c as { text?: string }).text === 'string') {
+              textParts.push((c as { text: string }).text);
             }
           }
           if (textParts.length > 0) {

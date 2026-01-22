@@ -70,7 +70,7 @@ import { useStore } from '@/lib/store';
 import { cn, generateId } from '@/lib/utils';
 import { useTaskStream } from '@/lib/hooks/use-task-stream';
 import type { Task, Project, Message, ToolCall, ProgressItem, Artifact } from '@/lib/types';
-import ReactMarkdown from 'react-markdown';
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
 import { AVAILABLE_INTEGRATIONS } from '@/lib/integrations';
 import { AVAILABLE_SKILLS } from '@/lib/skills';
 
@@ -693,8 +693,8 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                         <span className="text-[17px] font-semibold text-text-primary">manus</span>
                       </div>
                       {/* Message content */}
-                      <div className="prose prose-invert prose-sm max-w-none text-[15px] text-text-primary leading-relaxed">
-                        <ReactMarkdown>{message.content}</ReactMarkdown>
+                      <div className="max-w-none text-[15px] text-text-primary leading-relaxed">
+                        <MarkdownRenderer content={message.content} />
                       </div>
                       {/* Loading indicator - below content, only on last message while streaming */}
                       {taskStream.isRunning && index === displayMessages.length - 1 && (

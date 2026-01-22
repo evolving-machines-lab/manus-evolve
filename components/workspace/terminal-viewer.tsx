@@ -9,11 +9,16 @@ interface TerminalViewerProps {
 }
 
 // Parse terminal output and colorize prompt
-function parseTerminalContent(content: string): React.ReactNode[] {
+function parseTerminalContent(content: string, command?: string): React.ReactNode[] {
   const lines = content.split('\n');
   const nodes: React.ReactNode[] = [];
 
   lines.forEach((line, index) => {
+    // Skip if this line is just the command repeated
+    if (command && line.trim() === command.trim()) {
+      return;
+    }
+
     // Match common prompt patterns:
     // ubuntu@sandbox:~ $ command
     // user@host:path$ command
@@ -24,7 +29,7 @@ function parseTerminalContent(content: string): React.ReactNode[] {
       // Line with prompt
       nodes.push(
         <div key={index} className="whitespace-pre-wrap">
-          <span className="text-green-500">{promptMatch[1]}</span>
+          <span className="text-emerald-400 font-medium">{promptMatch[1]}</span>
           <span className="text-white"> {promptMatch[2]}</span>
         </div>
       );
@@ -32,14 +37,14 @@ function parseTerminalContent(content: string): React.ReactNode[] {
       // Simple prompt
       nodes.push(
         <div key={index} className="whitespace-pre-wrap">
-          <span className="text-green-500">$</span>
+          <span className="text-emerald-400 font-medium">$</span>
           <span className="text-white"> {line.slice(2)}</span>
         </div>
       );
     } else {
       // Regular output line
       nodes.push(
-        <div key={index} className="whitespace-pre-wrap text-text-primary">
+        <div key={index} className="whitespace-pre-wrap text-[#e0e0e0]">
           {line || ' '}
         </div>
       );
@@ -50,32 +55,43 @@ function parseTerminalContent(content: string): React.ReactNode[] {
 }
 
 export function TerminalViewer({ content, command, title }: TerminalViewerProps) {
-  const parsedContent = useMemo(() => parseTerminalContent(content), [content]);
-
-  // Generate title from command if not provided
-  const displayTitle = title || (command ? command.split(' ')[0] : 'terminal');
+  const parsedContent = useMemo(() => parseTerminalContent(content, command), [content, command]);
 
   return (
-    <div className="h-full flex flex-col bg-[#1e1e1e] rounded-xl border border-[#3a3a3a] overflow-hidden">
-      {/* Terminal header */}
-      <div className="px-4 py-2.5 border-b border-[#3a3a3a] bg-[#252525] flex items-center justify-center">
-        <span className="text-[13px] text-text-tertiary">{displayTitle}</span>
+    <div className="h-full flex flex-col rounded-xl overflow-hidden shadow-lg border border-[#3a3a3a]">
+      {/* Terminal header - macOS style */}
+      <div className="px-4 py-3 bg-gradient-to-b from-[#3d3d3d] to-[#2d2d2d] flex items-center gap-3 border-b border-[#1a1a1a]">
+        {/* Traffic lights */}
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-[#ff5f57] shadow-inner" />
+          <div className="w-3 h-3 rounded-full bg-[#febc2e] shadow-inner" />
+          <div className="w-3 h-3 rounded-full bg-[#28c840] shadow-inner" />
+        </div>
+        {/* Title */}
+        <div className="flex-1 text-center">
+          <span className="text-[13px] font-medium text-[#999]">Terminal</span>
+        </div>
+        {/* Spacer for symmetry */}
+        <div className="w-[52px]" />
       </div>
 
       {/* Terminal content */}
-      <div className="flex-1 overflow-auto p-4 font-mono text-[13px] leading-relaxed bg-[#1e1e1e]">
+      <div className="flex-1 overflow-auto p-4 font-mono text-[13px] leading-relaxed bg-[#1a1a1a]">
         {/* Show command if provided */}
         {command && (
-          <div className="whitespace-pre-wrap mb-2">
-            <span className="text-green-500">ubuntu@sandbox:~ $</span>
-            <span className="text-white"> {command}</span>
+          <div className="whitespace-pre-wrap mb-1">
+            <span className="text-emerald-400 font-medium">❯</span>
+            <span className="text-white ml-2">{command}</span>
           </div>
         )}
         {/* Show content or loading state */}
         {content ? (
           parsedContent
         ) : command ? (
-          <div className="text-text-tertiary animate-pulse">Running...</div>
+          <div className="flex items-center gap-2 text-[#666] mt-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Running...</span>
+          </div>
         ) : null}
       </div>
     </div>

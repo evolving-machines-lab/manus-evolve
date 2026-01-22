@@ -75,33 +75,50 @@ export function CodeViewer({ content, filePath, language }: CodeViewerProps) {
   const detectedLanguage = language || detectLanguage(filePath);
   const fileName = getFileName(filePath);
 
-  // Custom dark theme based on the Manus screenshots
+  // Custom dark theme
   const customStyle: React.CSSProperties = {
     margin: 0,
     padding: '16px',
-    borderRadius: '0 0 12px 12px',
     fontSize: '13px',
     lineHeight: '1.6',
-    background: '#1e1e1e',
+    background: '#1a1a1a',
     fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+    minHeight: '100%',
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#1e1e1e] rounded-xl border border-[#3a3a3a] overflow-hidden">
-      {/* File header */}
-      <div className="px-4 py-2.5 border-b border-[#3a3a3a] bg-[#252525] flex items-center justify-center">
-        <span className="text-[13px] text-text-tertiary">{fileName}</span>
+    <div className="h-full flex flex-col rounded-xl overflow-hidden shadow-lg border border-[#3a3a3a]">
+      {/* File header - macOS style */}
+      <div className="px-4 py-3 bg-gradient-to-b from-[#3d3d3d] to-[#2d2d2d] flex items-center gap-3 border-b border-[#1a1a1a]">
+        {/* Traffic lights */}
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-[#ff5f57] shadow-inner" />
+          <div className="w-3 h-3 rounded-full bg-[#febc2e] shadow-inner" />
+          <div className="w-3 h-3 rounded-full bg-[#28c840] shadow-inner" />
+        </div>
+        {/* File name */}
+        <div className="flex-1 text-center">
+          <span className="text-[13px] font-medium text-[#999]">{fileName}</span>
+        </div>
+        {/* Spacer for symmetry */}
+        <div className="w-[52px]" />
       </div>
 
       {/* Code content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto bg-[#1a1a1a]">
         <SyntaxHighlighter
           language={detectedLanguage}
           style={oneDark}
           customStyle={customStyle}
-          showLineNumbers={false}
+          showLineNumbers={true}
           wrapLines={true}
           wrapLongLines={true}
+          lineNumberStyle={{
+            color: '#555',
+            paddingRight: '16px',
+            minWidth: '40px',
+            textAlign: 'right',
+          }}
         >
           {content}
         </SyntaxHighlighter>

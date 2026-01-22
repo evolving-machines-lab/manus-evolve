@@ -102,6 +102,7 @@ export default function StandaloneTaskPage() {
           task={currentTask}
           onClose={() => setRightPanelOpen(false)}
           defaultTab={defaultTab}
+          isOpen={rightPanelOpen}
         />
       </div>
     </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import {
   IconX,
   IconFolder,
@@ -77,6 +77,7 @@ interface RightPanelTabsProps {
   task: Task | null;
   onClose: () => void;
   defaultTab?: 'files' | 'artifacts' | 'browser';
+  isOpen?: boolean; // Track panel open state to force tab sync
   // For home page (pre-task) file management
   preTaskFiles?: PreTaskFile[];
   onPreTaskFilesChange?: (files: PreTaskFile[]) => void;
@@ -105,6 +106,7 @@ export function RightPanelTabs({
   task,
   onClose,
   defaultTab = 'browser',
+  isOpen,
   preTaskFiles,
   onPreTaskFilesChange,
   onPreTaskFilesAdded,
@@ -117,7 +119,6 @@ export function RightPanelTabs({
   const { rightPanelView, setRightPanelView, toolState } = useStore();
   const [activeTab, setActiveTab] = useState<'files' | 'artifacts' | 'browser'>(defaultTab);
   const [progressCollapsed, setProgressCollapsed] = useState(false);
-  const isFirstRender = useRef(true);
 
   // Use props if provided, otherwise fall back to store
   const effectiveToolKind = toolKind ?? toolState.kind;
@@ -126,15 +127,17 @@ export function RightPanelTabs({
   const effectiveToolCommand = toolCommand ?? toolState.command;
   const effectiveToolName = toolName ?? toolState.name;
 
-  // Sync activeTab when defaultTab prop changes (e.g., clicking attachment icon)
-  // Skip first render to avoid flicker
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
+  // Track previous isOpen state to detect when panel opens
+  const wasOpenRef = useRef(isOpen);
+
+  // Sync activeTab when panel opens - use useLayoutEffect to prevent flash
+  useLayoutEffect(() => {
+    // Only sync when panel opens (transitions from closed to open)
+    if (isOpen && !wasOpenRef.current) {
+      setActiveTab(defaultTab);
     }
-    setActiveTab(defaultTab);
-  }, [defaultTab]);
+    wasOpenRef.current = isOpen;
+  }, [isOpen, defaultTab]);
 
   const handleTabChange = (tab: 'files' | 'artifacts' | 'browser') => {
     setActiveTab(tab);
@@ -214,14 +217,40 @@ export function RightPanelTabs({
           )}
 
           {/* Task progress overlay at bottom */}
-          {task && task.progress.length > 0 && (
+          {task && task.progress.length > 0 && (() => {
+            // Get current step: in_progress > last completed > last step
+            const currentStep = task.progress.find(p => p.status === 'in_progress') ||
+              [...task.progress].reverse().find(p => p.status === 'completed') ||
+              task.progress[task.progress.length - 1];
+            const completedCount = task.progress.filter(p => p.status === 'completed').length;
+
+            return (
             <div className="absolute bottom-0 left-0 right-0 p-4">
               <div className="rounded-xl border border-[#4a4a4a] bg-[#2f2f2f]">
                 <div className="flex items-center justify-between p-4">
-                  <h3 className="text-[15px] font-medium text-text-primary">Task progress</h3>
-                  <div className="flex items-center gap-2">
+                  {progressCollapsed && currentStep ? (
+                    /* Collapsed: show current step */
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {currentStep.status === 'completed' ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-green-500 flex-shrink-0">
+                          <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      ) : currentStep.status === 'in_progress' ? (
+                        <div className="w-[18px] h-[18px] rounded-full border-2 border-accent border-t-transparent animate-spin flex-shrink-0" />
+                      ) : (
+                        <div className="w-[18px] h-[18px] rounded-full border border-text-quaternary flex-shrink-0" />
+                      )}
+                      <span className="text-[13px] text-text-primary truncate">
+                        {currentStep.content}
+                      </span>
+                    </div>
+                  ) : (
+                    /* Expanded: show header */
+                    <h3 className="text-[15px] font-medium text-text-primary">Task progress</h3>
+                  )}
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-[13px] text-text-tertiary">
-                      {task.progress.filter(p => p.status === 'completed').length} / {task.progress.length}
+                      {completedCount} / {task.progress.length}
                     </span>
                     <button
                       onClick={() => setProgressCollapsed(!progressCollapsed)}
@@ -272,7 +301,8 @@ export function RightPanelTabs({
                 )}
               </div>
             </div>
-          )}
+            );
+          })()}
         </div>
       </div>
     </div>

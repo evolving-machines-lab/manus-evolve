@@ -444,6 +444,7 @@ export default function HomePage() {
         task={null}
         onClose={() => setShowRightPanel(false)}
         defaultTab="files"
+        isOpen={showRightPanel}
         preTaskFiles={preTaskFiles}
         onPreTaskFilesChange={handlePreTaskFilesChange}
         onPreTaskFilesAdded={handlePreTaskFilesAdded}

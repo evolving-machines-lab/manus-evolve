@@ -319,7 +319,9 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
   const isBrowserActive = displayBrowserLiveUrl || displayBrowserScreenshotUrl || currentToolKind === 'browser';
 
   // Get current progress step for collapsed bar
+  // Priority: in_progress step > last completed step > last step
   const currentProgressStep = displayProgress.find(p => p.status === 'in_progress') ||
+    [...displayProgress].reverse().find(p => p.status === 'completed') ||
     displayProgress[displayProgress.length - 1];
 
   const handleCreateTask = async () => {
@@ -625,8 +627,14 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
   }
 
   // Calculate bottom padding based on preview state (needs to be taller than bottom section)
-  // When right panel is open, only input shows. When closed, preview + progress + input
-  const bottomPadding = rightPanelOpen ? 'pb-[220px]' : 'pb-[420px]';
+  // When right panel is open or no preview, only input shows. When preview exists, add more padding
+  const bottomPadding = rightPanelOpen
+    ? 'pb-[240px]'
+    : !hasToolCalls
+      ? 'pb-[280px]'
+      : previewCollapsed
+        ? 'pb-[380px]'
+        : 'pb-[560px]';
 
   return (
     <div className="flex-1 h-full bg-bg-content relative overflow-hidden">
@@ -755,33 +763,62 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                   {/* Floating thumbnail - Manus style */}
                   <div
                     onClick={() => onOpenPanel?.('browser')}
-                    className="absolute left-[17px] bottom-[17px] w-[128px] h-[80px] rounded-xl bg-white border border-[#4a4a4a] overflow-hidden cursor-pointer z-10 pointer-events-auto shadow-lg"
+                    className="absolute left-[17px] bottom-[17px] w-[128px] h-[80px] rounded-xl border border-[#4a4a4a] overflow-hidden cursor-pointer z-10 pointer-events-auto shadow-lg group"
                   >
                     {displayBrowserScreenshotUrl ? (
                       <img
                         src={displayBrowserScreenshotUrl}
                         alt="Browser preview"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover bg-white"
                       />
+                    ) : (currentToolKind === 'execute' || currentToolKind === 'bash' || currentToolKind === 'terminal' || currentToolKind === 'code') && (taskStream.currentToolCommand || taskStream.currentToolContent) ? (
+                      /* Terminal mini preview */
+                      <div className="h-full bg-[#1a1a1a] p-2 overflow-hidden">
+                        <div className="font-mono text-[6px] leading-tight">
+                          {taskStream.currentToolCommand && (
+                            <div className="flex">
+                              <span className="text-emerald-400">$</span>
+                              <span className="text-white ml-1 truncate">{taskStream.currentToolCommand.slice(0, 40)}</span>
+                            </div>
+                          )}
+                          {taskStream.currentToolContent && (
+                            <div className="text-[#888] mt-0.5 line-clamp-4">
+                              {taskStream.currentToolContent.slice(0, 200)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (currentToolKind === 'read' || currentToolKind === 'edit') && (taskStream.currentToolContent || taskStream.currentToolFilePath) ? (
+                      /* Editor mini preview */
+                      <div className="h-full bg-[#1a1a1a] overflow-hidden">
+                        <div className="bg-[#252525] px-2 py-1 border-b border-[#333]">
+                          <span className="text-[6px] text-[#888] truncate block">{taskStream.currentToolFilePath?.split('/').pop() || 'file'}</span>
+                        </div>
+                        <div className="p-2 font-mono text-[6px] leading-tight text-[#888] line-clamp-4">
+                          {taskStream.currentToolContent?.slice(0, 200) || '// Loading...'}
+                        </div>
+                      </div>
                     ) : (
-                      <div className="h-full flex flex-col items-center justify-center p-2 bg-[#f5f5f5]">
-                        {isRunning ? (
-                          <>
-                            <div className="w-6 h-6 rounded-full border-2 border-accent border-t-transparent animate-spin mb-1.5" />
-                            <span className="text-[8px] text-gray-500">Working...</span>
-                          </>
-                        ) : (
-                          <>
-                            {getToolIcon(currentToolKind, 20, "text-gray-400")}
-                            <span className="text-[8px] text-gray-500 mt-1.5">Ready</span>
-                          </>
-                        )}
+                      /* Default: show empty terminal like right panel */
+                      <div className="h-full bg-[#1a1a1a] p-2 overflow-hidden">
+                        <div className="font-mono text-[6px] leading-tight flex items-center">
+                          <span className="text-emerald-400">ubuntu@sandbox:~</span>
+                          <span className="text-white ml-1">$</span>
+                          <span className="w-[4px] h-[8px] bg-[#ccc] ml-1" />
+                        </div>
                       </div>
                     )}
+                    {/* Expand icon overlay */}
+                    <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md bg-[#3a3a3a]">
+                      <IconExpand size={12} className="text-white" />
+                    </div>
                   </div>
 
-                  {/* Thin progress bar */}
-                  <div className="rounded-2xl border border-[#444444] bg-[#2f2f2f] px-4 py-3 pl-[160px] pointer-events-auto shadow-sm">
+                  {/* Thin progress bar - click anywhere to expand */}
+                  <div
+                    onClick={() => setPreviewCollapsed(false)}
+                    className="rounded-2xl border border-[#444444] bg-[#2f2f2f] px-4 py-3 pl-[160px] pointer-events-auto shadow-sm cursor-pointer hover:border-[#555555] transition-colors"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="flex-1 flex items-center gap-3">
                         {currentProgressStep ? (
@@ -835,30 +872,53 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                   <div className="flex items-start gap-4">
                     <div
                       onClick={() => onOpenPanel?.('browser')}
-                      className="relative w-[128px] h-[80px] rounded-xl bg-white border border-[#4a4a4a] overflow-hidden cursor-pointer group flex-shrink-0 shadow-sm"
+                      className="relative w-[128px] h-[80px] rounded-xl border border-[#4a4a4a] overflow-hidden cursor-pointer group flex-shrink-0 shadow-sm"
                     >
                       {displayBrowserScreenshotUrl ? (
                         <img
                           src={displayBrowserScreenshotUrl}
                           alt="Browser preview"
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover bg-white"
                         />
+                      ) : (currentToolKind === 'execute' || currentToolKind === 'bash' || currentToolKind === 'terminal' || currentToolKind === 'code') && (taskStream.currentToolCommand || taskStream.currentToolContent) ? (
+                        /* Terminal mini preview */
+                        <div className="h-full bg-[#1a1a1a] p-2 overflow-hidden">
+                          <div className="font-mono text-[6px] leading-tight">
+                            {taskStream.currentToolCommand && (
+                              <div className="flex">
+                                <span className="text-emerald-400">$</span>
+                                <span className="text-white ml-1 truncate">{taskStream.currentToolCommand.slice(0, 40)}</span>
+                              </div>
+                            )}
+                            {taskStream.currentToolContent && (
+                              <div className="text-[#888] mt-0.5 line-clamp-4">
+                                {taskStream.currentToolContent.slice(0, 200)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (currentToolKind === 'read' || currentToolKind === 'edit') && (taskStream.currentToolContent || taskStream.currentToolFilePath) ? (
+                        /* Editor mini preview */
+                        <div className="h-full bg-[#1a1a1a] overflow-hidden">
+                          <div className="bg-[#252525] px-2 py-1 border-b border-[#333]">
+                            <span className="text-[6px] text-[#888] truncate block">{taskStream.currentToolFilePath?.split('/').pop() || 'file'}</span>
+                          </div>
+                          <div className="p-2 font-mono text-[6px] leading-tight text-[#888] line-clamp-4">
+                            {taskStream.currentToolContent?.slice(0, 200) || '// Loading...'}
+                          </div>
+                        </div>
                       ) : (
-                        <div className="h-full flex flex-col items-center justify-center p-2 bg-[#f5f5f5]">
-                          {isRunning ? (
-                            <>
-                              <div className="w-6 h-6 rounded-full border-2 border-accent border-t-transparent animate-spin mb-1.5" />
-                              <span className="text-[8px] text-gray-500">Working...</span>
-                            </>
-                          ) : (
-                            <>
-                              {getToolIcon(currentToolKind, 20, "text-gray-400")}
-                              <span className="text-[8px] text-gray-500 mt-1.5">Ready</span>
-                            </>
-                          )}
+                        /* Default: show empty terminal like right panel */
+                        <div className="h-full bg-[#1a1a1a] p-2 overflow-hidden">
+                          <div className="font-mono text-[6px] leading-tight flex items-center">
+                            <span className="text-emerald-400">ubuntu@sandbox:~</span>
+                            <span className="text-white ml-1">$</span>
+                            <span className="w-[4px] h-[8px] bg-[#ccc] ml-1" />
+                          </div>
                         </div>
                       )}
-                      <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded bg-black/50">
+                      {/* Expand icon overlay */}
+                      <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md bg-[#3a3a3a]">
                         <IconExpand size={12} className="text-white" />
                       </div>
                     </div>

@@ -111,6 +111,7 @@ export default function ProjectPage() {
           task={currentTask}
           onClose={() => setRightPanelOpen(false)}
           defaultTab={defaultTab}
+          isOpen={rightPanelOpen}
         />
       </div>
     </div>

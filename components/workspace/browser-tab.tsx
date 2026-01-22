@@ -116,12 +116,12 @@ export function BrowserTab({
             {/* Spacer for symmetry */}
             <div className="w-[52px]" />
           </div>
-          {/* Screenshot content - aligned to top */}
-          <div className="flex-1 overflow-auto bg-[#1a1a1a] p-4">
+          {/* Screenshot content - full width */}
+          <div className="flex-1 overflow-auto bg-[#1a1a1a]">
             <img
               src={task?.browserScreenshotUrl}
               alt="Browser Screenshot"
-              className="max-w-full object-contain rounded-lg"
+              className="w-full object-contain"
             />
           </div>
         </div>

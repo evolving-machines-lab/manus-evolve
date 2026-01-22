@@ -61,7 +61,7 @@ export function TerminalViewer({ content, command, title, isRunning = false }: T
   return (
     <div className="h-full flex flex-col rounded-xl overflow-hidden shadow-lg border border-[#3a3a3a]">
       {/* Terminal header - macOS style */}
-      <div className="px-4 py-3 bg-gradient-to-b from-[#2a2a2a] to-[#1f1f1f] flex items-center gap-3 border-b border-[#1a1a1a]">
+      <div className="px-4 py-3 bg-[#252525] flex items-center gap-3 border-b border-[#1a1a1a]">
         {/* Traffic lights */}
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-[#ff5f57] shadow-inner" />

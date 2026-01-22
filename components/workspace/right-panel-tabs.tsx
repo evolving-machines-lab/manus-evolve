@@ -209,6 +209,7 @@ export function RightPanelTabs({
               toolFilePath={effectiveToolFilePath}
               toolCommand={effectiveToolCommand}
               toolName={effectiveToolName}
+              isRunning={task?.status === 'running'}
             />
           )}
 

@@ -6,6 +6,7 @@ interface TerminalViewerProps {
   content: string;
   command?: string;
   title?: string;
+  isRunning?: boolean;
 }
 
 // Parse terminal output and colorize prompt
@@ -54,13 +55,13 @@ function parseTerminalContent(content: string, command?: string): React.ReactNod
   return nodes;
 }
 
-export function TerminalViewer({ content, command, title }: TerminalViewerProps) {
+export function TerminalViewer({ content, command, title, isRunning = false }: TerminalViewerProps) {
   const parsedContent = useMemo(() => parseTerminalContent(content, command), [content, command]);
 
   return (
     <div className="h-full flex flex-col rounded-xl overflow-hidden shadow-lg border border-[#3a3a3a]">
       {/* Terminal header - macOS style */}
-      <div className="px-4 py-3 bg-gradient-to-b from-[#3d3d3d] to-[#2d2d2d] flex items-center gap-3 border-b border-[#1a1a1a]">
+      <div className="px-4 py-3 bg-gradient-to-b from-[#2a2a2a] to-[#1f1f1f] flex items-center gap-3 border-b border-[#1a1a1a]">
         {/* Traffic lights */}
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-[#ff5f57] shadow-inner" />
@@ -85,13 +86,20 @@ export function TerminalViewer({ content, command, title }: TerminalViewerProps)
             <span className="text-white">{command}</span>
           </div>
         )}
-        {/* Show content or loading state */}
+        {/* Show content or status */}
         {content ? (
           <div className="mt-1">{parsedContent}</div>
-        ) : command ? (
+        ) : command && isRunning ? (
           <div className="flex items-center gap-2 text-[#555] mt-2">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-[12px]">Running...</span>
+          </div>
+        ) : command ? (
+          <div className="flex items-center gap-2 text-emerald-500/70 mt-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span className="text-[12px]">Done</span>
           </div>
         ) : null}
       </div>

@@ -13,6 +13,7 @@ interface BrowserTabProps {
   toolFilePath?: string;
   toolCommand?: string;
   toolName?: string;
+  isRunning?: boolean;
 }
 
 export function BrowserTab({
@@ -22,6 +23,7 @@ export function BrowserTab({
   toolFilePath,
   toolCommand,
   toolName,
+  isRunning = false,
 }: BrowserTabProps) {
   const hasLiveUrl = !!task?.browserLiveUrl;
   const hasScreenshot = !!task?.browserScreenshotUrl;
@@ -90,6 +92,7 @@ export function BrowserTab({
           content={toolContent || ''}
           command={toolCommand}
           title={toolName}
+          isRunning={isRunning}
         />
       </div>
     );

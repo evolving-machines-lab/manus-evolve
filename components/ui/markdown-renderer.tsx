@@ -40,6 +40,8 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
                     style={oneDark}
                     language={language || 'text'}
                     PreTag="div"
+                    wrapLines={false}
+                    wrapLongLines={true}
                     customStyle={{
                       margin: 0,
                       padding: '16px',
@@ -49,6 +51,11 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
                       lineHeight: '1.6',
                       background: '#1a1a1a',
                       border: '1px solid #333',
+                    }}
+                    codeTagProps={{
+                      style: {
+                        background: 'transparent',
+                      },
                     }}
                   >
                     {codeString}

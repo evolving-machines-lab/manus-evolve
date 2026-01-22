@@ -229,16 +229,33 @@ export function setupEventHandlers(evolve: Evolve, callbacks: EvolveCallbacks): 
       case 'tool_call_update': {
         // Extract text content from tool output
         let outputContent: string | undefined;
-        if (update.content) {
+        if (update.content && Array.isArray(update.content)) {
           const textParts: string[] = [];
           for (const c of update.content) {
+            // Handle wrapped content: { type: "content", content: { type: "text", text: "..." } }
             if (c.type === 'content' && c.content?.type === 'text' && c.content.text) {
               textParts.push(c.content.text);
+            }
+            // Handle diff content: { type: "diff", path, oldText, newText }
+            else if (c.type === 'diff' && c.newText) {
+              textParts.push(c.newText);
+            }
+            // Handle plain text content (some agents may send this)
+            else if (typeof c === 'string') {
+              textParts.push(c);
+            }
+            // Handle { text: "..." } directly
+            else if (c.text && typeof c.text === 'string') {
+              textParts.push(c.text);
             }
           }
           if (textParts.length > 0) {
             outputContent = textParts.join('\n');
           }
+        }
+        // Also check if content is a plain string
+        else if (typeof update.content === 'string') {
+          outputContent = update.content;
         }
 
         if (callbacks.onToolCallUpdate) {

@@ -77,20 +77,21 @@ export function TerminalViewer({ content, command, title }: TerminalViewerProps)
 
       {/* Terminal content */}
       <div className="flex-1 overflow-auto p-4 font-mono text-[13px] leading-relaxed bg-[#1a1a1a]">
-        {/* Show command if provided */}
+        {/* Show command with ubuntu@sandbox prompt like Manus */}
         {command && (
-          <div className="whitespace-pre-wrap mb-1">
-            <span className="text-emerald-400 font-medium">❯</span>
-            <span className="text-white ml-2">{command}</span>
+          <div className="whitespace-pre-wrap">
+            <span className="text-emerald-400">ubuntu@sandbox:~</span>
+            <span className="text-white"> $ </span>
+            <span className="text-white">{command}</span>
           </div>
         )}
         {/* Show content or loading state */}
         {content ? (
-          parsedContent
+          <div className="mt-1">{parsedContent}</div>
         ) : command ? (
-          <div className="flex items-center gap-2 text-[#666] mt-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Running...</span>
+          <div className="flex items-center gap-2 text-[#555] mt-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[12px]">Running...</span>
           </div>
         ) : null}
       </div>

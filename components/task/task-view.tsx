@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   IconChevronDown,
   StatusDot,
@@ -505,14 +505,26 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen, onClosePa
     : (task?.progress || []);  // Previous progress when not running (completed tasks)
 
   // Combine task messages with streaming messages (avoid duplicates by ID)
-  const baseMessages = task?.messages || [];
-  const streamingMessages = taskStream.messages || [];
-  const displayMessages = taskStream.isRunning
-    ? [
-        ...baseMessages,
-        ...streamingMessages.filter(sm => !baseMessages.some(bm => bm.id === sm.id))
-      ]
-    : baseMessages;
+  // Memoize to prevent unnecessary re-renders and re-computation
+  const displayMessages = useMemo(() => {
+    const baseMessages = task?.messages || [];
+    const streamingMessages = taskStream.messages || [];
+    return taskStream.isRunning
+      ? [
+          ...baseMessages,
+          ...streamingMessages.filter(sm => !baseMessages.some(bm => bm.id === sm.id))
+        ]
+      : baseMessages;
+  }, [task?.messages, taskStream.messages, taskStream.isRunning]);
+
+  // Pre-compute reconstructed parts for all messages once
+  // This ensures immediate interleaved rendering without per-message computation during render
+  const messagesWithParts = useMemo(() => {
+    return displayMessages.map(message => ({
+      message,
+      parts: reconstructMessageParts(message),
+    }));
+  }, [displayMessages]);
 
   const displayBrowserLiveUrl = taskStream.browserLiveUrl || task?.browserLiveUrl;
   const displayBrowserScreenshotUrl = taskStream.browserScreenshotUrl || task?.browserScreenshotUrl;
@@ -929,7 +941,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen, onClosePa
             </div>
           ) : (
             <div className="space-y-6">
-              {displayMessages.map((message, index) => (
+              {messagesWithParts.map(({ message, parts }, index) => (
                 <div
                   key={message.id}
                 >
@@ -950,9 +962,9 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen, onClosePa
                         <IconLogo size={24} className="text-text-primary" />
                         <span className="text-[17px] font-semibold text-text-primary">manus</span>
                       </div>
-                      {/* Message content - always use reconstructed parts for consistent interleaved rendering */}
+                      {/* Message content - use pre-computed parts for consistent interleaved rendering */}
                       <div className="space-y-4">
-                        {reconstructMessageParts(message).map((part, partIndex) => (
+                        {parts.map((part, partIndex) => (
                           part.type === 'text' ? (
                             <div key={`text-${partIndex}`} className="max-w-none text-[15px] text-text-primary leading-relaxed">
                               <MarkdownRenderer content={part.content} />
@@ -976,7 +988,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen, onClosePa
                         ))}
                       </div>
                       {/* Loading indicator - below content, only on last message while streaming */}
-                      {isRunning && index === displayMessages.length - 1 && (
+                      {isRunning && index === messagesWithParts.length - 1 && (
                         <div className="mt-4">
                           <span className="text-[16px] flex items-center gap-2.5">
                             <span className="text-accent text-[20px]">{spinnerChars[spinnerIndex]}</span>
@@ -990,7 +1002,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen, onClosePa
               ))}
 
               {/* Manus thinking indicator - shows when waiting for first response */}
-              {isRunning && displayMessages[displayMessages.length - 1]?.role === 'user' && (
+              {isRunning && messagesWithParts[messagesWithParts.length - 1]?.message.role === 'user' && (
                 <div>
                   {/* Header with logo */}
                   <div className="flex items-center gap-3 mb-3">

@@ -76,18 +76,23 @@ export function extractBrowserUseUrls(text: string): { liveUrl?: string; screens
   const liveMatch = text.match(/"live_url"\s*:\s*"([^"]+)"/);
   if (liveMatch) liveUrl = liveMatch[1];
 
-  const screenshotMatch = text.match(/"screenshot_url"\s*:\s*"([^"]+)"/);
-  if (screenshotMatch) screenshotUrl = screenshotMatch[1];
+  // 2. JSON.parse for proper extraction (steps array may have multiple screenshots)
+  try {
+    const parsed = JSON.parse(text) as BrowserUseResponse;
+    if (!liveUrl) liveUrl = parsed.live_url;
 
-  // 2. JSON.parse fallback (for steps[].screenshot_url)
-  if (!liveUrl || !screenshotUrl) {
-    try {
-      const parsed = JSON.parse(text) as BrowserUseResponse;
-      if (!liveUrl) liveUrl = parsed.live_url;
-      if (!screenshotUrl) screenshotUrl = parsed.screenshot_url ?? parsed.steps?.[0]?.screenshot_url;
-    } catch {
-      // Ignore parse errors
+    // Get screenshot: prefer top-level screenshot_url, else get LAST step's screenshot
+    // (steps array contains per-step screenshots, last one is most recent)
+    if (parsed.screenshot_url) {
+      screenshotUrl = parsed.screenshot_url;
+    } else if (parsed.steps && parsed.steps.length > 0) {
+      const lastStep = parsed.steps[parsed.steps.length - 1];
+      screenshotUrl = lastStep?.screenshot_url;
     }
+  } catch {
+    // JSON parse failed, fallback to regex for screenshot
+    const screenshotMatch = text.match(/"screenshot_url"\s*:\s*"([^"]+)"/);
+    if (screenshotMatch) screenshotUrl = screenshotMatch[1];
   }
 
   return { liveUrl, screenshotUrl };

@@ -19,6 +19,7 @@ import {
   IconFile,
   IconEdit,
 } from '@/components/ui/icons';
+import { ActivityLog } from './activity-log';
 
 // Check if tool is browser-use by name (MCP tools have kind: "other" but name like "browser-use: browser_task")
 function isBrowserUseTool(name?: string): boolean {
@@ -962,31 +963,77 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen, onClosePa
                         <IconLogo size={24} className="text-text-primary" />
                         <span className="text-[17px] font-semibold text-text-primary">manus</span>
                       </div>
-                      {/* Message content - use pre-computed parts for consistent interleaved rendering */}
-                      <div className="space-y-4">
-                        {parts.map((part, partIndex) => (
-                          part.type === 'text' ? (
-                            <div key={`text-${partIndex}`} className="max-w-none text-[15px] text-text-primary leading-relaxed">
-                              <MarkdownRenderer content={part.content} />
+                      {/* Message content - group into collapsible ActivityLog with interleaved text */}
+                      {(() => {
+                        // Find where tool calls start and end in the parts array
+                        const firstToolIndex = parts.findIndex(p => p.type === 'tool_call');
+                        const lastToolIndex = parts.map(p => p.type).lastIndexOf('tool_call');
+
+                        // Leading text: everything before first tool call (shown full size)
+                        const leadingTextParts = firstToolIndex > 0
+                          ? parts.slice(0, firstToolIndex).filter(p => p.type === 'text')
+                          : firstToolIndex === -1
+                            ? parts.filter(p => p.type === 'text') // No tool calls, all text is leading
+                            : [];
+
+                        // Middle parts: from first tool call to last tool call (goes into ActivityLog)
+                        const middleParts = firstToolIndex >= 0
+                          ? parts.slice(firstToolIndex, lastToolIndex + 1)
+                          : [];
+
+                        // Trailing text: everything after last tool call (shown full size - final response)
+                        const trailingTextParts = lastToolIndex >= 0 && lastToolIndex < parts.length - 1
+                          ? parts.slice(lastToolIndex + 1).filter(p => p.type === 'text')
+                          : [];
+
+                        // If no tool calls, just render all text normally
+                        if (firstToolIndex === -1) {
+                          return (
+                            <div className="space-y-4">
+                              {leadingTextParts.map((part, i) => (
+                                <div key={`text-${i}`} className="max-w-none text-[15px] text-text-primary leading-relaxed">
+                                  <MarkdownRenderer content={part.content} />
+                                </div>
+                              ))}
                             </div>
-                          ) : (
-                            <ToolCallCard
-                              key={part.toolCall.id || `tc-${partIndex}`}
-                              toolCall={part.toolCall}
-                              onClick={() => {
+                          );
+                        }
+
+                        return (
+                          <div className="space-y-4">
+                            {/* Leading text (before tool calls) - full size */}
+                            {leadingTextParts.map((part, i) => (
+                              <div key={`lead-${i}`} className="max-w-none text-[15px] text-text-primary leading-relaxed">
+                                <MarkdownRenderer content={part.content} />
+                              </div>
+                            ))}
+
+                            {/* Collapsible activity log with interleaved text and tool calls */}
+                            <ActivityLog
+                              parts={middleParts}
+                              isRunning={isRunning && index === messagesWithParts.length - 1}
+                              onToolCallClick={(tc) => {
                                 setToolState({
-                                  kind: part.toolCall.kind,
-                                  content: part.toolCall.outputContent,
-                                  filePath: part.toolCall.filePath,
-                                  command: part.toolCall.command,
-                                  name: part.toolCall.name,
+                                  kind: tc.kind,
+                                  content: tc.outputContent,
+                                  filePath: tc.filePath,
+                                  command: tc.command,
+                                  name: tc.name,
                                 });
                                 onOpenPanel?.('browser');
                               }}
+                              visibleCount={5}
                             />
-                          )
-                        ))}
-                      </div>
+
+                            {/* Trailing text (after tool calls - final response) - full size */}
+                            {trailingTextParts.map((part, i) => (
+                              <div key={`trail-${i}`} className="max-w-none text-[15px] text-text-primary leading-relaxed">
+                                <MarkdownRenderer content={part.content} />
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                       {/* Loading indicator - below content, only on last message while streaming */}
                       {isRunning && index === messagesWithParts.length - 1 && (
                         <div className="mt-4">

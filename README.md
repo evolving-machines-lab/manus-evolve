@@ -6,9 +6,17 @@ AI agent workspace powered by the [Evolve SDK](https://github.com/evolving-machi
 
 ```bash
 npm install
-cp .env.example .env.local  # Add your EVOLVE_API_KEY
+cp .env.example .env.local
 npm run dev
 ```
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `EVOLVE_API_KEY` | Yes | API key for running agents via Evolve SDK |
+| `COMPOSIO_API_KEY` | No | API key for third-party integrations (GitHub, Gmail, Slack, etc.) |
+| `DATABASE_PATH` | No | Custom SQLite database path (defaults to `data/manus.db`) |
 
 ## Features
 

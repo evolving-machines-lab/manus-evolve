@@ -83,7 +83,7 @@ interface TaskViewProps {
 
 export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskViewProps) {
   const [input, setInput] = useState('');
-  const [previewCollapsed, setPreviewCollapsed] = useState(false);
+  const [previewCollapsed, setPreviewCollapsed] = useState(true);
   const [showSelectionModal, setShowSelectionModal] = useState(false);
   const [modalTab, setModalTab] = useState<'integrations' | 'skills'>('integrations');
   const [modelSelection, setModelSelection] = useState<ModelSelection>({ agent: 'claude', model: 'opus' });
@@ -207,7 +207,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
       hasAutoStartedRef.current !== task.id
     ) {
       hasAutoStartedRef.current = task.id;
-      updateTask(task.id, { status: 'running' });
+      updateTask(task.id, { status: 'running', progress: [] });  // Clear old progress
       taskStream.runTask(task.id);
     }
   }, [task?.id, task?.status, task?.messages, taskStream, updateTask]);
@@ -259,10 +259,11 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
       timestamp: new Date().toISOString(),
     };
 
-    // Optimistic update
+    // Optimistic update - clear progress for new run
     updateTask(task.id, {
       messages: [...task.messages, userMessage],
       status: 'running',
+      progress: [],  // Clear old progress from previous runs
       title: task.title === 'New Task' ? input.trim().slice(0, 50) : task.title,
     });
 
@@ -280,10 +281,10 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
     }
   };
 
-  // Use streaming state when running, combined with existing task messages
-  const displayProgress = taskStream.isRunning && taskStream.progress.length > 0
-    ? taskStream.progress
-    : (task?.progress || []);
+  // Use streaming state when running - don't fall back to old progress from previous runs
+  const displayProgress = taskStream.isRunning
+    ? taskStream.progress  // Only current run's progress when running
+    : (task?.progress || []);  // Previous progress when not running (completed tasks)
 
   // Combine task messages with streaming messages (avoid duplicates by ID)
   const baseMessages = task?.messages || [];
@@ -794,7 +795,19 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                             </span>
                           </>
                         ) : (
-                          <span className="text-[13px] text-text-tertiary flex-1">Ready</span>
+                          /* No task progress - show tool status */
+                          <div className="flex items-center gap-2 flex-1">
+                            <div className="w-5 h-5 rounded-md bg-[#3a3a3a] flex items-center justify-center flex-shrink-0">
+                              {getToolIcon(currentToolKind, 12, "text-text-secondary")}
+                            </div>
+                            <span className="text-[13px] text-text-tertiary">
+                              {isRunning ? (
+                                <>Manus is using <span className="text-text-primary font-medium">{getToolDisplayName(currentToolKind)}</span></>
+                              ) : (
+                                <>Manus used <span className="text-text-primary font-medium">{getToolDisplayName(currentToolKind)}</span></>
+                              )}
+                            </span>
+                          </div>
                         )}
                       </div>
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { IconGlobe, IconTerminal, IconEdit } from '@/components/ui/icons';
 import { CodeViewer } from './code-viewer';
 import { TerminalViewer } from './terminal-viewer';
 import type { Task } from '@/lib/types';
@@ -113,23 +112,14 @@ export function BrowserTab({
     );
   }
 
-  // Empty state with appropriate icon
+  // Default state: show empty terminal with sandbox prompt
   return (
-    <div className={`${containerClass} items-center justify-center`}>
-      {isEditorTool ? (
-        <IconEdit size={32} className="text-text-quaternary" />
-      ) : isTerminalTool ? (
-        <IconTerminal size={32} className="text-text-quaternary" />
-      ) : (
-        <IconGlobe size={32} className="text-text-quaternary" />
-      )}
-      <span className="text-[13px] text-text-quaternary mt-3">
-        {isEditorTool
-          ? 'No file content'
-          : isTerminalTool
-          ? 'No terminal output'
-          : 'No browser view'}
-      </span>
+    <div className={`${containerClass} p-4`}>
+      <TerminalViewer
+        content=""
+        command=""
+        isRunning={false}
+      />
     </div>
   );
 }

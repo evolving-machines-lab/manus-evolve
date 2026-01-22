@@ -37,38 +37,19 @@ export function BrowserTab({
   const isTerminalTool = toolKind === 'execute' || toolKind === 'bash' || toolKind === 'terminal' || toolKind === 'code';
   const isBrowserTool = toolKind === 'browser' || toolKind === 'fetch';
 
-  // Priority: Browser live > Tool content > Browser screenshot > Empty
-  // If browser tool with live URL, show browser
-  // If file/terminal tool with content, show code/terminal viewer
-  // Otherwise show screenshot or empty state
-
-  // Show browser for browser tool or when we have live URL
-  if (isBrowserTool || hasLiveUrl) {
-    if (hasLiveUrl) {
-      return (
-        <div className={containerClass}>
-          <iframe
-            src={task?.browserLiveUrl}
-            className="w-full h-full border-0"
-            title="Live Browser View"
-            sandbox="allow-scripts allow-same-origin"
-          />
-        </div>
-      );
-    }
-    if (hasScreenshot) {
-      return (
-        <div className={`${containerClass} p-4`}>
-          <div className="flex-1 flex items-center justify-center bg-[#1e1e1e] rounded-xl border border-[#3a3a3a]">
-            <img
-              src={task?.browserScreenshotUrl}
-              alt="Browser Screenshot"
-              className="max-w-full max-h-full object-contain rounded-lg"
-            />
-          </div>
-        </div>
-      );
-    }
+  // Priority: Live browser (only when running) > Tool content > Browser screenshot > Default terminal
+  // Only show live iframe when actually running - sessions expire after run ends
+  if (isRunning && hasLiveUrl) {
+    return (
+      <div className={containerClass}>
+        <iframe
+          src={task?.browserLiveUrl}
+          className="w-full h-full border-0"
+          title="Live Browser View"
+          sandbox="allow-scripts allow-same-origin"
+        />
+      </div>
+    );
   }
 
   // Show editor for file operations (show even without content if we have file path)

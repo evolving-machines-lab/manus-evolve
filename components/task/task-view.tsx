@@ -207,7 +207,12 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
       hasAutoStartedRef.current !== task.id
     ) {
       hasAutoStartedRef.current = task.id;
-      updateTask(task.id, { status: 'running', progress: [] });  // Clear old progress
+      updateTask(task.id, {
+        status: 'running',
+        progress: [],  // Clear old progress
+        browserLiveUrl: undefined,  // Clear old browser state
+        browserScreenshotUrl: undefined,
+      });
       taskStream.runTask(task.id);
     }
   }, [task?.id, task?.status, task?.messages, taskStream, updateTask]);
@@ -259,11 +264,13 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
       timestamp: new Date().toISOString(),
     };
 
-    // Optimistic update - clear progress for new run
+    // Optimistic update - clear progress and browser state for new run
     updateTask(task.id, {
       messages: [...task.messages, userMessage],
       status: 'running',
       progress: [],  // Clear old progress from previous runs
+      browserLiveUrl: undefined,  // Clear old browser state
+      browserScreenshotUrl: undefined,
       title: task.title === 'New Task' ? input.trim().slice(0, 50) : task.title,
     });
 

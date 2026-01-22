@@ -170,6 +170,67 @@ import { cn, generateId } from '@/lib/utils';
 import { useTaskStream } from '@/lib/hooks/use-task-stream';
 import type { Task, Project, Message, ToolCall, ProgressItem, Artifact, MessagePart } from '@/lib/types';
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
+
+// Reconstruct interleaved parts from content + toolCalls when parts is not available
+// This ensures consistent rendering whether from streaming or DB load
+function reconstructMessageParts(message: Message): MessagePart[] {
+  // If parts already exists and has content, use it
+  if (message.parts && message.parts.length > 0) {
+    return message.parts;
+  }
+
+  const parts: MessagePart[] = [];
+  const toolCalls = message.toolCalls || [];
+
+  // If no tool calls, just return text content
+  if (toolCalls.length === 0) {
+    if (message.content) {
+      parts.push({ type: 'text', content: message.content });
+    }
+    return parts;
+  }
+
+  // Split content by double newlines to find natural break points
+  // Then interleave tool calls at these breaks
+  const content = message.content || '';
+  const paragraphs = content.split(/\n\n+/).filter(p => p.trim());
+
+  if (paragraphs.length === 0) {
+    // No text content, just tool calls
+    toolCalls.forEach(tc => parts.push({ type: 'tool_call', toolCall: tc }));
+    return parts;
+  }
+
+  // Distribute tool calls across paragraphs
+  // Heuristic: put tool calls after each paragraph proportionally
+  const toolsPerParagraph = Math.ceil(toolCalls.length / paragraphs.length);
+  let toolIndex = 0;
+
+  paragraphs.forEach((paragraph, i) => {
+    // Add text paragraph
+    parts.push({ type: 'text', content: paragraph });
+
+    // Add tool calls for this paragraph
+    const toolsForThisParagraph = Math.min(
+      toolsPerParagraph,
+      toolCalls.length - toolIndex
+    );
+
+    // On last paragraph, add all remaining tools
+    const toolCount = i === paragraphs.length - 1
+      ? toolCalls.length - toolIndex
+      : toolsForThisParagraph;
+
+    for (let j = 0; j < toolCount; j++) {
+      if (toolIndex < toolCalls.length) {
+        parts.push({ type: 'tool_call', toolCall: toolCalls[toolIndex] });
+        toolIndex++;
+      }
+    }
+  });
+
+  return parts;
+}
 import { AVAILABLE_INTEGRATIONS } from '@/lib/integrations';
 import { AVAILABLE_SKILLS } from '@/lib/skills';
 
@@ -889,60 +950,31 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen, onClosePa
                         <IconLogo size={24} className="text-text-primary" />
                         <span className="text-[17px] font-semibold text-text-primary">manus</span>
                       </div>
-                      {/* Message content - render parts interleaved if available, otherwise fallback to content + toolCalls */}
-                      {message.parts && message.parts.length > 0 ? (
-                        <div className="space-y-4">
-                          {message.parts.map((part, partIndex) => (
-                            part.type === 'text' ? (
-                              <div key={`text-${partIndex}`} className="max-w-none text-[15px] text-text-primary leading-relaxed">
-                                <MarkdownRenderer content={part.content} />
-                              </div>
-                            ) : (
-                              <ToolCallCard
-                                key={part.toolCall.id || `tc-${partIndex}`}
-                                toolCall={part.toolCall}
-                                onClick={() => {
-                                  setToolState({
-                                    kind: part.toolCall.kind,
-                                    content: part.toolCall.outputContent,
-                                    filePath: part.toolCall.filePath,
-                                    command: part.toolCall.command,
-                                    name: part.toolCall.name,
-                                  });
-                                  onOpenPanel?.('browser');
-                                }}
-                              />
-                            )
-                          ))}
-                        </div>
-                      ) : (
-                        <>
-                          {/* Fallback: render content then tool calls (for messages loaded from DB) */}
-                          <div className="max-w-none text-[15px] text-text-primary leading-relaxed">
-                            <MarkdownRenderer content={message.content} />
-                          </div>
-                          {message.toolCalls && message.toolCalls.length > 0 && (
-                            <div className="mt-4 space-y-2">
-                              {message.toolCalls.map((tc) => (
-                                <ToolCallCard
-                                  key={tc.id}
-                                  toolCall={tc}
-                                  onClick={() => {
-                                    setToolState({
-                                      kind: tc.kind,
-                                      content: tc.outputContent,
-                                      filePath: tc.filePath,
-                                      command: tc.command,
-                                      name: tc.name,
-                                    });
-                                    onOpenPanel?.('browser');
-                                  }}
-                                />
-                              ))}
+                      {/* Message content - always use reconstructed parts for consistent interleaved rendering */}
+                      <div className="space-y-4">
+                        {reconstructMessageParts(message).map((part, partIndex) => (
+                          part.type === 'text' ? (
+                            <div key={`text-${partIndex}`} className="max-w-none text-[15px] text-text-primary leading-relaxed">
+                              <MarkdownRenderer content={part.content} />
                             </div>
-                          )}
-                        </>
-                      )}
+                          ) : (
+                            <ToolCallCard
+                              key={part.toolCall.id || `tc-${partIndex}`}
+                              toolCall={part.toolCall}
+                              onClick={() => {
+                                setToolState({
+                                  kind: part.toolCall.kind,
+                                  content: part.toolCall.outputContent,
+                                  filePath: part.toolCall.filePath,
+                                  command: part.toolCall.command,
+                                  name: part.toolCall.name,
+                                });
+                                onOpenPanel?.('browser');
+                              }}
+                            />
+                          )
+                        ))}
+                      </div>
                       {/* Loading indicator - below content, only on last message while streaming */}
                       {isRunning && index === displayMessages.length - 1 && (
                         <div className="mt-4">

@@ -78,16 +78,34 @@ export function BrowserTab({
     );
   }
 
-  // Fallback: Show screenshot if available
+  // Fallback: Show screenshot if available (with browser-style header)
   if (hasScreenshot) {
     return (
       <div className={`${containerClass} p-4`}>
-        <div className="flex-1 flex items-center justify-center bg-[#1e1e1e] rounded-xl border border-[#3a3a3a]">
-          <img
-            src={task?.browserScreenshotUrl}
-            alt="Browser Screenshot"
-            className="max-w-full max-h-full object-contain rounded-lg"
-          />
+        <div className="h-full flex flex-col rounded-xl overflow-hidden shadow-lg border border-[#3a3a3a]">
+          {/* Browser header - macOS style */}
+          <div className="px-4 py-3 bg-[#252525] flex items-center gap-3 border-b border-[#1a1a1a]">
+            {/* Traffic lights */}
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-[#ff5f57] shadow-inner" />
+              <div className="w-3 h-3 rounded-full bg-[#febc2e] shadow-inner" />
+              <div className="w-3 h-3 rounded-full bg-[#28c840] shadow-inner" />
+            </div>
+            {/* Title */}
+            <div className="flex-1 text-center">
+              <span className="text-[13px] font-medium text-[#999]">Browser</span>
+            </div>
+            {/* Spacer for symmetry */}
+            <div className="w-[52px]" />
+          </div>
+          {/* Screenshot content - aligned to top */}
+          <div className="flex-1 overflow-auto bg-[#1a1a1a] p-4">
+            <img
+              src={task?.browserScreenshotUrl}
+              alt="Browser Screenshot"
+              className="max-w-full object-contain rounded-lg"
+            />
+          </div>
         </div>
       </div>
     );

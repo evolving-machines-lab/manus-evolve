@@ -90,44 +90,16 @@ export function BrowserTab({
   const isBrowserTool = isBrowserByKind || isBrowserByName; // Always check name for browser (MCP tools)
 
   // ============================================================================
-  // PRIORITY ORDER (based on LAST tool kind, not history):
-  // 1. Live browser iframe (only when running)
-  // 2. Editor (if last tool was read/edit)
-  // 3. Terminal (if last tool was execute/bash)
-  // 4. Browser screenshot (if last tool was browser OR no specific tool kind)
-  // 5. Terminal with history (if we have terminal commands but no specific last tool)
+  // PRIORITY ORDER:
+  // 1. Editor (if current tool is editor with content) - user needs to see file
+  // 2. Terminal (if current tool is terminal) - user needs to see commands
+  // 3. Live browser (if running + hasLiveUrl) - persists during other operations
+  // 4. Browser screenshot (if hasScreenshot)
+  // 5. Terminal with history (if we have terminal commands)
   // 6. Empty terminal (default)
   // ============================================================================
 
-  // 1. Live browser - only show when task is running, we have live URL, AND current tool is browser
-  // Without isBrowserTool check, live browser would take over even when using editor/terminal tools
-  if (isRunning && hasLiveUrl && isBrowserTool) {
-    return (
-      <div className={`${containerClass} p-4`}>
-        <div className="h-full flex flex-col rounded-xl overflow-hidden shadow-lg border border-[#3a3a3a]">
-          <div className="px-4 py-2 bg-[#252525] flex items-center gap-3 border-b border-[#1a1a1a]">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[#ff5f57] shadow-inner" />
-              <div className="w-3 h-3 rounded-full bg-[#febc2e] shadow-inner" />
-              <div className="w-3 h-3 rounded-full bg-[#28c840] shadow-inner" />
-            </div>
-            <div className="flex-1 text-center">
-              <span className="text-[13px] font-medium text-[#999]">Browser</span>
-            </div>
-            <div className="w-[52px]" />
-          </div>
-          <iframe
-            src={effectiveLiveUrl}
-            className="flex-1 w-full border-0 bg-white"
-            title="Live Browser View"
-            sandbox="allow-scripts allow-same-origin"
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // 2. Editor - if last tool was an editor tool
+  // 1. Editor - if current tool is an editor tool with content to show
   if (isEditorTool && (hasToolContent || toolFilePath)) {
     return (
       <div className={`${containerClass} p-4`}>
@@ -139,7 +111,7 @@ export function BrowserTab({
     );
   }
 
-  // 3. Terminal - if last tool was a terminal tool (show accumulated commands)
+  // 2. Terminal - if current tool is a terminal tool (show accumulated commands)
   if (isTerminalTool) {
     const allCommands = [...terminalCommands];
 
@@ -167,34 +139,60 @@ export function BrowserTab({
     }
   }
 
-  // 4. Browser screenshot - if last tool was browser OR no specific tool kind but we have screenshot
-  if (isBrowserTool || (!toolKind && hasScreenshot) || hasScreenshot) {
-    if (hasScreenshot) {
-      return (
-        <div className={`${containerClass} p-4`}>
-          <div className="h-full flex flex-col rounded-xl overflow-hidden shadow-lg border border-[#3a3a3a]">
-            <div className="px-4 py-2 bg-[#252525] flex items-center gap-3 border-b border-[#1a1a1a]">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#ff5f57] shadow-inner" />
-                <div className="w-3 h-3 rounded-full bg-[#febc2e] shadow-inner" />
-                <div className="w-3 h-3 rounded-full bg-[#28c840] shadow-inner" />
-              </div>
-              <div className="flex-1 text-center">
-                <span className="text-[13px] font-medium text-[#999]">Browser</span>
-              </div>
-              <div className="w-[52px]" />
+  // 3. Live browser - show when running and we have a live URL
+  // This persists even when agent is using other tools (Composio, thinking, etc.)
+  if (isRunning && hasLiveUrl) {
+    return (
+      <div className={`${containerClass} p-4`}>
+        <div className="h-full flex flex-col rounded-xl overflow-hidden shadow-lg border border-[#3a3a3a]">
+          <div className="px-4 py-2 bg-[#252525] flex items-center gap-3 border-b border-[#1a1a1a]">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-[#ff5f57] shadow-inner" />
+              <div className="w-3 h-3 rounded-full bg-[#febc2e] shadow-inner" />
+              <div className="w-3 h-3 rounded-full bg-[#28c840] shadow-inner" />
             </div>
-            <div className="flex-1 overflow-auto bg-[#1a1a1a]">
-              <img
-                src={effectiveScreenshotUrl}
-                alt="Browser Screenshot"
-                className="w-full object-contain"
-              />
+            <div className="flex-1 text-center">
+              <span className="text-[13px] font-medium text-[#999]">Browser</span>
             </div>
+            <div className="w-[52px]" />
+          </div>
+          <iframe
+            src={effectiveLiveUrl}
+            className="flex-1 w-full border-0 bg-white"
+            title="Live Browser View"
+            sandbox="allow-scripts allow-same-origin"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // 4. Browser screenshot - show when we have a screenshot (task finished or no live URL)
+  if (hasScreenshot) {
+    return (
+      <div className={`${containerClass} p-4`}>
+        <div className="h-full flex flex-col rounded-xl overflow-hidden shadow-lg border border-[#3a3a3a]">
+          <div className="px-4 py-2 bg-[#252525] flex items-center gap-3 border-b border-[#1a1a1a]">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-[#ff5f57] shadow-inner" />
+              <div className="w-3 h-3 rounded-full bg-[#febc2e] shadow-inner" />
+              <div className="w-3 h-3 rounded-full bg-[#28c840] shadow-inner" />
+            </div>
+            <div className="flex-1 text-center">
+              <span className="text-[13px] font-medium text-[#999]">Browser</span>
+            </div>
+            <div className="w-[52px]" />
+          </div>
+          <div className="flex-1 overflow-auto bg-[#1a1a1a]">
+            <img
+              src={effectiveScreenshotUrl}
+              alt="Browser Screenshot"
+              className="w-full object-contain"
+            />
           </div>
         </div>
-      );
-    }
+      </div>
+    );
   }
 
   // 5. Terminal with history - if no specific tool but we have terminal commands

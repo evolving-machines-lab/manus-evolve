@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { IconChevronDown, IconTerminal, IconEdit, IconGlobe, IconSearch } from '@/components/ui/icons';
+import { IconChevronDown } from '@/components/ui/icons';
 import { cn } from '@/lib/utils';
 import type { ToolCall, MessagePart } from '@/lib/types';
 
@@ -12,43 +12,6 @@ interface ActivityLogProps {
   onToolCallClick?: (toolCall: ToolCall) => void;
   /** Number of recent items to show when collapsed */
   visibleCount?: number;
-}
-
-// Map tool kind to icon
-function getToolIcon(kind?: string, name?: string, size = 14, className = "text-text-tertiary") {
-  const nameLower = name?.toLowerCase() || '';
-
-  // Browser tools
-  if (nameLower.includes('browser-use') || nameLower.includes('browser_task') ||
-      nameLower.includes('monitor_task') || kind === 'browser' || kind === 'fetch') {
-    return <IconGlobe size={size} className={className} />;
-  }
-
-  // Search tools
-  if (kind === 'search') {
-    return <IconSearch size={size} className={className} />;
-  }
-
-  // Editor tools
-  if (['read', 'edit', 'write', 'delete', 'move'].includes(kind || '')) {
-    return <IconEdit size={size} className={className} />;
-  }
-
-  // Default: terminal
-  return <IconTerminal size={size} className={className} />;
-}
-
-// Map tool kind to display name
-function getToolDisplayName(kind?: string, name?: string): string {
-  const nameLower = name?.toLowerCase() || '';
-
-  if (nameLower.includes('browser-use') || nameLower.includes('browser_task') ||
-      nameLower.includes('monitor_task') || kind === 'browser' || kind === 'fetch') {
-    return 'Browser';
-  }
-  if (kind === 'search') return 'Search';
-  if (['read', 'edit', 'write', 'delete', 'move'].includes(kind || '')) return 'Editor';
-  return 'Terminal';
 }
 
 // Truncate and format command for display
@@ -80,67 +43,53 @@ function ActivityItem({
     toolCall.name;
 
   return (
-    <div className="flex items-stretch gap-3 group">
-      {/* Dashed line and status indicator */}
-      <div className="relative flex flex-col items-center w-5">
-        {/* Continuous dashed line behind the dot */}
-        {!isLast && (
-          <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px border-l border-dashed border-[#444]" />
+    <div className="flex items-start gap-3 group">
+      {/* Status indicator - matching right panel style */}
+      <div className="flex-shrink-0 mt-0.5">
+        {isCompleted ? (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-green-500">
+            <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        ) : isRunning ? (
+          <div className="w-[18px] h-[18px] rounded-full bg-blue-500" />
+        ) : isFailed ? (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-red-500">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+            <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-text-quaternary">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
+          </svg>
         )}
-        {/* Status dot - solid bg to cover the dashed line */}
-        <div className={cn(
-          "w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 z-10 mt-0.5",
-          isCompleted ? "bg-[#1a3a1a]" :
-          isFailed ? "bg-[#3a1a1a]" :
-          "bg-[#2f2f2f]"
-        )}>
-          {isRunning ? (
-            <div className="w-2 h-2 rounded-full border border-accent border-t-transparent animate-spin" />
-          ) : isCompleted ? (
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" className="text-green-500">
-              <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          ) : isFailed ? (
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" className="text-red-500">
-              <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          ) : (
-            <div className="w-2 h-2 rounded-full bg-text-quaternary" />
-          )}
-        </div>
       </div>
 
       {/* Content */}
       <div
         onClick={onClick}
         className={cn(
-          "flex-1 pb-4 cursor-pointer group-hover:opacity-80 transition-opacity",
-          isLast && "pb-0"
+          "flex-1 cursor-pointer group-hover:opacity-80 transition-opacity",
+          !isLast && "pb-3"
         )}
       >
-        <div className="flex items-center gap-2 text-[13px]">
-          {getToolIcon(toolCall.kind, toolCall.name, 12, "text-text-secondary")}
-          <span className="text-text-secondary">{getToolDisplayName(toolCall.kind, toolCall.name)}</span>
-          {toolCall.filePath && (
-            <span className="text-text-tertiary truncate max-w-[200px]">
-              {toolCall.filePath.split('/').pop()}
-            </span>
-          )}
-        </div>
         {/* Command with nice formatting */}
-        {toolCall.command && (
-          <div className="mt-1 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#252525] max-w-full">
+        {toolCall.command ? (
+          <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#252525] max-w-full">
             <span className="text-[11px] text-text-tertiary">$</span>
-            <code className="text-[11px] text-text-secondary font-mono truncate">
+            <code className="text-[12px] text-text-secondary font-mono truncate">
               {formatCommand(toolCall.command, 50)}
             </code>
           </div>
-        )}
-        {/* Title or name if no command */}
-        {!toolCall.command && displayText && (
-          <div className="text-[13px] text-text-primary mt-0.5 truncate">
+        ) : (
+          /* Title or name if no command */
+          <span className={cn(
+            "text-[13px] leading-relaxed",
+            isCompleted ? "text-text-primary" :
+            isRunning ? "text-text-primary" :
+            "text-text-tertiary"
+          )}>
             {displayText}
-          </div>
+          </span>
         )}
       </div>
     </div>
@@ -150,20 +99,13 @@ function ActivityItem({
 // Interleaved text item (smaller styling)
 function TextItem({ content, isLast }: { content: string; isLast?: boolean }) {
   return (
-    <div className="flex items-stretch gap-3">
-      {/* Dashed line continuation */}
-      <div className="relative flex flex-col items-center w-5">
-        {/* Continuous dashed line behind the dot */}
-        {!isLast && (
-          <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-px border-l border-dashed border-[#444]" />
-        )}
-        {/* Small dot for text items */}
-        <div className="w-5 h-5 flex items-center justify-center flex-shrink-0 z-10 mt-0.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#555]" />
-        </div>
+    <div className="flex items-start gap-3">
+      {/* Small dot for text items - matching the 18px width */}
+      <div className="w-[18px] h-[18px] flex items-center justify-center flex-shrink-0 mt-0.5">
+        <div className="w-1.5 h-1.5 rounded-full bg-[#555]" />
       </div>
       {/* Text content - smaller but readable */}
-      <div className={cn("flex-1 text-[13px] text-text-secondary leading-relaxed pb-4", isLast && "pb-0")}>
+      <div className={cn("flex-1 text-[13px] text-text-secondary leading-relaxed", !isLast && "pb-3")}>
         {content}
       </div>
     </div>
@@ -180,8 +122,6 @@ export function ActivityLog({
 
   if (parts.length === 0) return null;
 
-  // Count tool calls for the "show more" logic
-  const toolCallCount = parts.filter(p => p.type === 'tool_call').length;
   const hasMore = parts.length > visibleCount;
   const hiddenCount = parts.length - visibleCount;
 

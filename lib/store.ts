@@ -76,8 +76,8 @@ export const useStore = create<AppState>((set) => ({
   setSidebarCollapsed: (collapsed: boolean) => set({ sidebarCollapsed: collapsed }),
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
 
-  // Tool state for code/terminal viewers
+  // Tool state for code/terminal viewers (synced from TaskView streaming)
   toolState: {},
-  setToolState: (state) => set((prev) => ({ toolState: { ...prev.toolState, ...state } })),
+  setToolState: (state) => set({ toolState: state }), // Replace entirely, don't merge (ensures clean state)
   clearToolState: () => set({ toolState: {} }),
 }));

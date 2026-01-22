@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { TaskView } from '@/components/task/task-view';
-import { RightPanelTabs } from '@/components/workspace/right-panel-tabs';
 import { IconSpinner } from '@/components/ui/icons';
 import { useStore } from '@/lib/store';
 import type { Task } from '@/lib/types';
@@ -17,33 +16,16 @@ export default function StandaloneTaskPage() {
     currentTask,
     setCurrentTask,
     setCurrentProject,
-    updateTask,
   } = useStore();
 
-  // Check if we already have this task in the store (from navigation)
-  const hasTaskInStore = currentTask?.id === taskId;
-
-  const [loading, setLoading] = useState(!hasTaskInStore);
+  const [loading, setLoading] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [defaultTab, setDefaultTab] = useState<'files' | 'artifacts' | 'browser'>('browser');
-  const hasFetchedRef = useRef(false);
 
-  // Fetch task once on mount (only if not already in store)
+  // Fetch task data on mount/navigation
   useEffect(() => {
-    if (hasFetchedRef.current) return;
-
-    // If we already have this task in store, skip fetch
-    if (hasTaskInStore) {
-      hasFetchedRef.current = true;
-      setCurrentProject(null);
-      return;
-    }
-
-    hasFetchedRef.current = true;
-
     const fetchTask = async () => {
       try {
-        // Fetch single task directly by ID
         const response = await fetch(`/api/tasks/${taskId}`);
         if (response.ok) {
           const task: Task = await response.json();
@@ -61,7 +43,7 @@ export default function StandaloneTaskPage() {
     };
 
     fetchTask();
-  }, [taskId, router, setCurrentTask, setCurrentProject, hasTaskInStore]);
+  }, [taskId, router, setCurrentTask, setCurrentProject]);
 
   const handleOpenPanel = (tab: 'files' | 'artifacts' | 'browser' = 'browser') => {
     setDefaultTab(tab);
@@ -83,28 +65,19 @@ export default function StandaloneTaskPage() {
     return null;
   }
 
+  // TaskView handles both main content and right panel internally (shares streaming data)
+  // Wrap in flex container for 50/50 layout when panel is open
   return (
     <div className="flex-1 flex overflow-hidden">
-      {/* Main content area - 50% when right panel is open, full otherwise */}
-      <div className={rightPanelOpen ? "w-1/2 flex flex-col overflow-hidden" : "flex-1 flex flex-col overflow-hidden"}>
-        <TaskView
-          task={currentTask}
-          project={null}
-          onOpenPanel={handleOpenPanel}
-          rightPanelOpen={rightPanelOpen}
-        />
-      </div>
-
-      {/* Right Panel with tabs - 50% width, always mounted to avoid flicker */}
-      <div className={rightPanelOpen ? "w-1/2 flex flex-col overflow-hidden" : "hidden"}>
-        <RightPanelTabs
-          project={null}
-          task={currentTask}
-          onClose={() => setRightPanelOpen(false)}
-          defaultTab={defaultTab}
-          isOpen={rightPanelOpen}
-        />
-      </div>
+      <TaskView
+        task={currentTask}
+        project={null}
+        onOpenPanel={handleOpenPanel}
+        rightPanelOpen={rightPanelOpen}
+        onClosePanel={() => setRightPanelOpen(false)}
+        defaultPanelTab={defaultTab}
+        renderRightPanel={true}
+      />
     </div>
   );
 }

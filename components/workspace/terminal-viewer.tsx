@@ -1,12 +1,23 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
+
+interface TerminalCommand {
+  command: string;
+  output?: string;
+  status?: 'completed' | 'in_progress' | 'pending' | 'failed';
+}
 
 interface TerminalViewerProps {
-  content: string;
+  // Single command (legacy support)
+  content?: string;
   command?: string;
   title?: string;
   isRunning?: boolean;
+  // Multiple commands (new - for accumulation)
+  commands?: TerminalCommand[];
+  // Task running state (for showing/hiding final prompt)
+  taskRunning?: boolean;
 }
 
 // Parse terminal output and colorize prompt
@@ -55,9 +66,74 @@ function parseTerminalContent(content: string, command?: string): React.ReactNod
   return nodes;
 }
 
-export function TerminalViewer({ content, command, title, isRunning = false }: TerminalViewerProps) {
-  const parsedContent = useMemo(() => parseTerminalContent(content, command), [content, command]);
+export function TerminalViewer({ content, command, title, isRunning = false, commands, taskRunning = false }: TerminalViewerProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
 
+  // All hooks must be called before any conditional returns (Rules of Hooks)
+  // Auto-scroll to bottom when content changes
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [commands, content]);
+
+  // Parse content for legacy mode (must be called before conditional return)
+  const parsedContent = useMemo(() => parseTerminalContent(content || '', command), [content, command]);
+
+  // If commands array is provided, render accumulated terminal
+  if (commands && commands.length > 0) {
+    return (
+      <div className="h-full flex flex-col rounded-xl overflow-hidden shadow-lg border border-[#3a3a3a]">
+        {/* Terminal header - macOS style */}
+        <div className="px-4 py-2 bg-[#252525] flex items-center gap-3 border-b border-[#1a1a1a]">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-[#ff5f57] shadow-inner" />
+            <div className="w-3 h-3 rounded-full bg-[#febc2e] shadow-inner" />
+            <div className="w-3 h-3 rounded-full bg-[#28c840] shadow-inner" />
+          </div>
+          <div className="flex-1 text-center">
+            <span className="text-[13px] font-medium text-[#999]">Terminal</span>
+          </div>
+          <div className="w-[52px]" />
+        </div>
+
+        {/* Terminal content - accumulated commands */}
+        <div ref={scrollRef} className="flex-1 overflow-auto p-4 font-mono text-[13px] leading-relaxed bg-[#1a1a1a]">
+          {commands.map((cmd, index) => (
+            <div key={index} className="mb-3">
+              {/* Command line */}
+              <div className="whitespace-pre-wrap">
+                <span className="text-emerald-400">ubuntu@sandbox:~</span>
+                <span className="text-white"> $ </span>
+                <span className="text-white">{cmd.command}</span>
+              </div>
+              {/* Output */}
+              {cmd.output ? (
+                <div className="mt-1 text-[#e0e0e0]">
+                  {parseTerminalContent(cmd.output, cmd.command)}
+                </div>
+              ) : cmd.status === 'in_progress' ? (
+                <div className="flex items-center gap-2 text-[#555] mt-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[12px]">Running...</span>
+                </div>
+              ) : null}
+            </div>
+          ))}
+          {/* Final prompt - only show when task is done */}
+          {!taskRunning && (
+            <div className="whitespace-pre-wrap flex items-center">
+              <span className="text-emerald-400">ubuntu@sandbox:~</span>
+              <span className="text-white"> $ </span>
+              <span className="w-[6px] h-[15px] bg-[#ccc] animate-pulse" />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Legacy single command mode
   return (
     <div className="h-full flex flex-col rounded-xl overflow-hidden shadow-lg border border-[#3a3a3a]">
       {/* Terminal header - macOS style */}
@@ -77,7 +153,7 @@ export function TerminalViewer({ content, command, title, isRunning = false }: T
       </div>
 
       {/* Terminal content */}
-      <div className="flex-1 overflow-auto p-4 font-mono text-[13px] leading-relaxed bg-[#1a1a1a]">
+      <div ref={scrollRef} className="flex-1 overflow-auto p-4 font-mono text-[13px] leading-relaxed bg-[#1a1a1a]">
         {/* Show command with ubuntu@sandbox prompt like Manus */}
         {command ? (
           <div className="whitespace-pre-wrap">

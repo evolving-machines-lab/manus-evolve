@@ -40,6 +40,11 @@ export interface Task {
   updatedAt: string;
 }
 
+// Message part types for interleaved content
+export type MessagePart =
+  | { type: 'text'; content: string }
+  | { type: 'tool_call'; toolCall: ToolCall };
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -48,6 +53,7 @@ export interface Message {
   mimeType?: string; // For images: 'image/png', 'image/jpeg'
   timestamp: string;
   toolCalls?: ToolCall[];
+  parts?: MessagePart[];  // Ordered parts for interleaved display
 }
 
 export type ToolKind = 'read' | 'edit' | 'delete' | 'move' | 'search' | 'execute' | 'think' | 'fetch' | 'switch_mode' | 'other';
@@ -143,13 +149,15 @@ export interface AppState {
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebar: () => void;
 
-  // Tool state for code/terminal viewers
+  // Tool state for code/terminal viewers (synced from TaskView streaming)
   toolState: {
     kind?: string;
     content?: string;
     filePath?: string;
     command?: string;
     name?: string;
+    browserLiveUrl?: string;
+    browserScreenshotUrl?: string;
   };
   setToolState: (state: Partial<AppState['toolState']>) => void;
   clearToolState: () => void;

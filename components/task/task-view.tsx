@@ -20,9 +20,24 @@ import {
   IconEdit,
 } from '@/components/ui/icons';
 
+// Check if tool is browser-use by name (MCP tools have kind: "other" but name like "browser-use: browser_task")
+function isBrowserUseTool(name?: string): boolean {
+  if (!name) return false;
+  const lowerName = name.toLowerCase();
+  return lowerName.includes('browser-use') ||
+         lowerName.includes('browser_task') ||
+         lowerName.includes('monitor_task');
+}
+
 // Map tool kind from ACP to icon component
 // SDK sends: read, edit, delete, move, search, execute, think, fetch, switch_mode, other
-function getToolIcon(kind?: string, size = 14, className = "text-text-tertiary") {
+// NOTE: browser-use MCP tools come with kind: "other", so we also check the name
+function getToolIcon(kind?: string, name?: string, size = 14, className = "text-text-tertiary") {
+  // Check browser-use by name first (MCP tools have kind: "other")
+  if (isBrowserUseTool(name)) {
+    return <IconGlobe size={size} className={className} />;
+  }
+
   switch (kind) {
     case 'browser':
     case 'fetch':
@@ -31,6 +46,7 @@ function getToolIcon(kind?: string, size = 14, className = "text-text-tertiary")
       return <IconSearch size={size} className={className} />;
     case 'read':
     case 'edit':
+    case 'write':
     case 'delete':
     case 'move':
       return <IconEdit size={size} className={className} />;
@@ -44,7 +60,13 @@ function getToolIcon(kind?: string, size = 14, className = "text-text-tertiary")
 }
 
 // Map tool kind to display name
-function getToolDisplayName(kind?: string): string {
+// NOTE: browser-use MCP tools come with kind: "other", so we also check the name
+function getToolDisplayName(kind?: string, name?: string): string {
+  // Check browser-use by name first (MCP tools have kind: "other")
+  if (isBrowserUseTool(name)) {
+    return 'Browser';
+  }
+
   switch (kind) {
     case 'browser':
     case 'fetch':
@@ -53,6 +75,7 @@ function getToolDisplayName(kind?: string): string {
       return 'Search';
     case 'read':
     case 'edit':
+    case 'write':
     case 'delete':
     case 'move':
       return 'Editor';
@@ -64,12 +87,88 @@ function getToolDisplayName(kind?: string): string {
       return 'Terminal';
   }
 }
+
+// Tool call card component for inline display
+interface ToolCallCardProps {
+  toolCall: ToolCall;
+  onClick?: () => void;
+  isActive?: boolean;
+}
+
+function ToolCallCard({ toolCall, onClick, isActive }: ToolCallCardProps) {
+  const isCompleted = toolCall.status === 'completed';
+  const isFailed = toolCall.status === 'failed';
+  const isRunning = toolCall.status === 'in_progress' || toolCall.status === 'pending';
+
+  // Determine display text - prefer title, then command/filePath
+  const displayText = toolCall.title ||
+    (toolCall.command ? `$ ${toolCall.command.slice(0, 60)}${toolCall.command.length > 60 ? '...' : ''}` : null) ||
+    (toolCall.filePath ? toolCall.filePath.split('/').pop() : null) ||
+    toolCall.name;
+
+  return (
+    <div
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all cursor-pointer group",
+        isActive
+          ? "bg-[#3a3a3a] border-accent"
+          : "bg-[#2a2a2a] border-[#3a3a3a] hover:border-[#4a4a4a] hover:bg-[#333]"
+      )}
+    >
+      {/* Status indicator / icon */}
+      <div className={cn(
+        "w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0",
+        isCompleted ? "bg-green-500/20" :
+        isFailed ? "bg-red-500/20" :
+        "bg-[#3a3a3a]"
+      )}>
+        {isRunning ? (
+          <div className="w-3 h-3 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+        ) : isCompleted ? (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-green-500">
+            <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        ) : isFailed ? (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-red-500">
+            <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        ) : (
+          getToolIcon(toolCall.kind, toolCall.name, 14, "text-text-secondary")
+        )}
+      </div>
+
+      {/* Tool info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-[13px] text-text-secondary">
+            {getToolDisplayName(toolCall.kind, toolCall.name)}
+          </span>
+          {toolCall.filePath && (
+            <span className="text-[12px] text-text-quaternary truncate">
+              {toolCall.filePath.split('/').pop()}
+            </span>
+          )}
+        </div>
+        <div className="text-[13px] text-text-primary truncate">
+          {displayText}
+        </div>
+      </div>
+
+      {/* Expand hint */}
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+        <IconExpand size={14} className="text-text-tertiary" />
+      </div>
+    </div>
+  );
+}
 import { SelectionModal } from '@/components/selection-modal';
 import { ModelSelector, AGENT_TYPES, type ModelSelection } from '@/components/model-selector';
+import { RightPanelTabs } from '@/components/workspace/right-panel-tabs';
 import { useStore } from '@/lib/store';
 import { cn, generateId } from '@/lib/utils';
 import { useTaskStream } from '@/lib/hooks/use-task-stream';
-import type { Task, Project, Message, ToolCall, ProgressItem, Artifact } from '@/lib/types';
+import type { Task, Project, Message, ToolCall, ProgressItem, Artifact, MessagePart } from '@/lib/types';
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
 import { AVAILABLE_INTEGRATIONS } from '@/lib/integrations';
 import { AVAILABLE_SKILLS } from '@/lib/skills';
@@ -79,9 +178,13 @@ interface TaskViewProps {
   project: Project | null;
   onOpenPanel?: (tab?: 'files' | 'artifacts' | 'browser') => void;
   rightPanelOpen?: boolean;
+  onClosePanel?: () => void;
+  defaultPanelTab?: 'files' | 'artifacts' | 'browser';
+  // If true, TaskView will render the RightPanelTabs internally (shares streaming data directly)
+  renderRightPanel?: boolean;
 }
 
-export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskViewProps) {
+export function TaskView({ task, project, onOpenPanel, rightPanelOpen, onClosePanel, defaultPanelTab = 'browser', renderRightPanel }: TaskViewProps) {
   const [input, setInput] = useState('');
   const [previewCollapsed, setPreviewCollapsed] = useState(true);
   const [showSelectionModal, setShowSelectionModal] = useState(false);
@@ -161,39 +264,63 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
     },
   });
 
-  // Sync tool state to store for RightPanelTabs to consume
-  // Only update when we have new tool data (don't clear with undefined)
+  // Sync tool state + browser URLs to store for RightPanelTabs to consume
+  // ALWAYS sync current streaming state so RightPanelTabs matches preview exactly
   useEffect(() => {
-    // Only update if we have a tool kind - this preserves the last used tool
-    if (taskStream.currentToolKind) {
-      setToolState({
-        kind: taskStream.currentToolKind,
-        content: taskStream.currentToolContent,
-        filePath: taskStream.currentToolFilePath,
-        command: taskStream.currentToolCommand,
-        name: taskStream.currentToolName,
-      });
-    } else if (taskStream.currentToolContent) {
-      // Update content even if kind is temporarily undefined (during updates)
-      setToolState({
-        content: taskStream.currentToolContent,
-      });
-    }
+    // Always sync all tool state - don't conditionally skip
+    // This ensures store always reflects current streaming state
+    setToolState({
+      kind: taskStream.currentToolKind,
+      content: taskStream.currentToolContent,
+      filePath: taskStream.currentToolFilePath,
+      command: taskStream.currentToolCommand,
+      name: taskStream.currentToolName,
+      browserLiveUrl: taskStream.browserLiveUrl,
+      browserScreenshotUrl: taskStream.browserScreenshotUrl,
+    });
   }, [
     taskStream.currentToolKind,
     taskStream.currentToolContent,
     taskStream.currentToolFilePath,
     taskStream.currentToolCommand,
     taskStream.currentToolName,
+    taskStream.browserLiveUrl,
+    taskStream.browserScreenshotUrl,
     setToolState,
   ]);
 
-  // Clear tool state when component unmounts or task changes
+  // Clear tool state only when switching to a DIFFERENT task (not on unmount)
+  // This preserves tool state when navigating away and back to the same task
+  const prevTaskIdRef = useRef<string | null>(null);
   useEffect(() => {
-    return () => {
+    if (prevTaskIdRef.current && prevTaskIdRef.current !== task?.id) {
       clearToolState();
-    };
+    }
+    prevTaskIdRef.current = task?.id || null;
   }, [task?.id, clearToolState]);
+
+  // Initialize tool state from the last tool call in task messages when navigating back
+  // This ensures the right panel shows the last tool state instead of being empty
+  useEffect(() => {
+    // Only initialize if we're not streaming and have task messages with tool calls
+    if (taskStream.isRunning || taskStream.currentToolKind) return;
+
+    // Find the last tool call from all messages
+    const allToolCalls = task?.messages
+      ?.flatMap(m => m.toolCalls || [])
+      .filter(tc => tc.status === 'completed' || tc.status === 'in_progress') || [];
+
+    if (allToolCalls.length > 0) {
+      const lastToolCall = allToolCalls[allToolCalls.length - 1];
+      setToolState({
+        kind: lastToolCall.kind,
+        content: lastToolCall.outputContent,
+        filePath: lastToolCall.filePath,
+        command: lastToolCall.command,
+        name: lastToolCall.name,
+      });
+    }
+  }, [task?.id, task?.messages, taskStream.isRunning, taskStream.currentToolKind, setToolState]);
 
   // Auto-start task if pending and hasn't been run yet
   // Check: no assistant messages yet (only user messages or empty)
@@ -216,6 +343,28 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
     }
   }, [task?.id, task?.status, task?.messages, taskStream, updateTask]);
 
+  // Poll for task updates when task is running but we're not streaming
+  // This handles the case where user navigates away and back
+  useEffect(() => {
+    if (!task?.id || task.status !== 'running' || taskStream.isRunning) return;
+
+    const pollTask = async () => {
+      try {
+        const response = await fetch(`/api/tasks/${task.id}`);
+        if (response.ok) {
+          const updatedTask = await response.json();
+          updateTask(task.id, updatedTask);
+        }
+      } catch (error) {
+        console.error('Error polling task:', error);
+      }
+    };
+
+    // Poll every 2 seconds
+    const interval = setInterval(pollTask, 2000);
+    return () => clearInterval(interval);
+  }, [task?.id, task?.status, taskStream.isRunning, updateTask]);
+
   // Update selections when project changes
   // Sync selections when task or project changes
   useEffect(() => {
@@ -234,23 +383,26 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
     }
   }, [input]);
 
-  // Braille spinner animation when streaming
+  // Combined running state: streaming OR task status from DB
+  const isTaskRunning = taskStream.isRunning || task?.status === 'running';
+
+  // Braille spinner animation when running
   useEffect(() => {
-    if (!taskStream.isRunning) return;
+    if (!isTaskRunning) return;
     const interval = setInterval(() => {
       setSpinnerIndex((prev) => (prev + 1) % spinnerChars.length);
     }, 50);
     return () => clearInterval(interval);
-  }, [taskStream.isRunning, spinnerChars.length]);
+  }, [isTaskRunning, spinnerChars.length]);
 
-  // Rotate fun words every 4 seconds when streaming
+  // Rotate fun words every 4 seconds when running
   useEffect(() => {
-    if (!taskStream.isRunning) return;
+    if (!isTaskRunning) return;
     const interval = setInterval(() => {
       setFunWordIndex((prev) => (prev + 1) % funWords.length);
     }, 4000);
     return () => clearInterval(interval);
-  }, [taskStream.isRunning, funWords.length]);
+  }, [isTaskRunning, funWords.length]);
 
   const handleSubmit = async () => {
     if (!input.trim() || !task) return;
@@ -304,19 +456,52 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
   const displayBrowserLiveUrl = taskStream.browserLiveUrl || task?.browserLiveUrl;
   const displayBrowserScreenshotUrl = taskStream.browserScreenshotUrl || task?.browserScreenshotUrl;
 
+  // Browser state sync moved below after currentTool* variables are defined
+
   const completedSteps = displayProgress.filter((p) => p.status === 'completed').length || 0;
   const totalSteps = displayProgress.length || 0;
-  const isRunning = isCreatingTask || taskStream.isRunning || task?.status === 'running';
+  const isRunning = isCreatingTask || isTaskRunning;
 
   // Track whether to show preview (Manus-style: only show when agent is using tools)
   // Show preview if: agent has made tool calls OR task has messages with tool calls (from previous runs)
   const hasToolCalls = taskStream.hasToolCalls ||
     (task?.messages?.some(m => m.toolCalls && m.toolCalls.length > 0) ?? false);
-  const currentToolName = taskStream.currentToolName;
-  const currentToolKind = taskStream.currentToolKind;
+
+  // Extract last tool call from task messages as fallback for reload scenario
+  // This ensures the preview shows tool state even after page reload
+  // Include all tool calls (not just completed/in_progress) to catch any status
+  const lastToolCallFromTask = (() => {
+    if (!task?.messages) return null;
+    const allToolCalls = task.messages
+      .flatMap(m => m.toolCalls || []);
+    return allToolCalls.length > 0 ? allToolCalls[allToolCalls.length - 1] : null;
+  })();
+
+  // Extract recent terminal commands for mini preview (last 3)
+  const recentTerminalCommands = (() => {
+    if (!task?.messages) return [];
+    const terminalKinds = ['execute', 'bash', 'terminal', 'code'];
+    const commands = task.messages
+      .flatMap(m => m.toolCalls || [])
+      .filter(tc => terminalKinds.includes(tc.kind || '') && tc.command)
+      .map(tc => tc.command!);
+    return commands.slice(-3);
+  })();
+
+  // Use streaming values with fallback to last tool call from task messages
+  const currentToolName = taskStream.currentToolName ?? lastToolCallFromTask?.name;
+  const currentToolKind = taskStream.currentToolKind ?? lastToolCallFromTask?.kind;
+  const currentToolContent = taskStream.currentToolContent ?? lastToolCallFromTask?.outputContent;
+  const currentToolCommand = taskStream.currentToolCommand ?? lastToolCallFromTask?.command;
+  const currentToolFilePath = taskStream.currentToolFilePath ?? lastToolCallFromTask?.filePath;
 
   // Determine if browser is being used (for display purposes)
-  const isBrowserActive = displayBrowserLiveUrl || displayBrowserScreenshotUrl || currentToolKind === 'browser';
+  // NOTE: browser-use MCP tools have kind: "other", so also check tool name
+  const isBrowserActive = displayBrowserLiveUrl || displayBrowserScreenshotUrl ||
+                          currentToolKind === 'browser' || isBrowserUseTool(currentToolName);
+
+  // NOTE: Tool state is synced to store via the effect above (lines ~274-305)
+  // RightPanelTabs reads from the same store, ensuring preview and panel always match
 
   // Get current progress step for collapsed bar
   // Priority: in_progress step > last completed step > last step
@@ -636,8 +821,12 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
         ? 'pb-[380px]'
         : 'pb-[560px]';
 
-  return (
-    <div className="flex-1 h-full bg-bg-content relative overflow-hidden">
+  // When renderRightPanel is true, return both main content and right panel as flex siblings
+  const mainContent = (
+    <div className={cn(
+      "h-full bg-bg-content relative overflow-hidden",
+      renderRightPanel && rightPanelOpen ? "w-1/2 flex-shrink-0" : "flex-1"
+    )}>
       {/* Model display - top left (fixed header that covers scrolling content) */}
       <div className="absolute top-0 left-0 right-0 h-14 bg-bg-content z-20 flex items-center px-4 gap-3">
         {/* Project breadcrumb (only for project tasks) */}
@@ -700,12 +889,62 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                         <IconLogo size={24} className="text-text-primary" />
                         <span className="text-[17px] font-semibold text-text-primary">manus</span>
                       </div>
-                      {/* Message content */}
-                      <div className="max-w-none text-[15px] text-text-primary leading-relaxed">
-                        <MarkdownRenderer content={message.content} />
-                      </div>
+                      {/* Message content - render parts interleaved if available, otherwise fallback to content + toolCalls */}
+                      {message.parts && message.parts.length > 0 ? (
+                        <div className="space-y-4">
+                          {message.parts.map((part, partIndex) => (
+                            part.type === 'text' ? (
+                              <div key={`text-${partIndex}`} className="max-w-none text-[15px] text-text-primary leading-relaxed">
+                                <MarkdownRenderer content={part.content} />
+                              </div>
+                            ) : (
+                              <ToolCallCard
+                                key={part.toolCall.id || `tc-${partIndex}`}
+                                toolCall={part.toolCall}
+                                onClick={() => {
+                                  setToolState({
+                                    kind: part.toolCall.kind,
+                                    content: part.toolCall.outputContent,
+                                    filePath: part.toolCall.filePath,
+                                    command: part.toolCall.command,
+                                    name: part.toolCall.name,
+                                  });
+                                  onOpenPanel?.('browser');
+                                }}
+                              />
+                            )
+                          ))}
+                        </div>
+                      ) : (
+                        <>
+                          {/* Fallback: render content then tool calls (for messages loaded from DB) */}
+                          <div className="max-w-none text-[15px] text-text-primary leading-relaxed">
+                            <MarkdownRenderer content={message.content} />
+                          </div>
+                          {message.toolCalls && message.toolCalls.length > 0 && (
+                            <div className="mt-4 space-y-2">
+                              {message.toolCalls.map((tc) => (
+                                <ToolCallCard
+                                  key={tc.id}
+                                  toolCall={tc}
+                                  onClick={() => {
+                                    setToolState({
+                                      kind: tc.kind,
+                                      content: tc.outputContent,
+                                      filePath: tc.filePath,
+                                      command: tc.command,
+                                      name: tc.name,
+                                    });
+                                    onOpenPanel?.('browser');
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
                       {/* Loading indicator - below content, only on last message while streaming */}
-                      {taskStream.isRunning && index === displayMessages.length - 1 && (
+                      {isRunning && index === displayMessages.length - 1 && (
                         <div className="mt-4">
                           <span className="text-[16px] flex items-center gap-2.5">
                             <span className="text-accent text-[20px]">{spinnerChars[spinnerIndex]}</span>
@@ -719,7 +958,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
               ))}
 
               {/* Manus thinking indicator - shows when waiting for first response */}
-              {taskStream.isRunning && displayMessages[displayMessages.length - 1]?.role === 'user' && (
+              {isRunning && displayMessages[displayMessages.length - 1]?.role === 'user' && (
                 <div>
                   {/* Header with logo */}
                   <div className="flex items-center gap-3 mb-3">
@@ -745,6 +984,26 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                   <span className="text-[14px] text-green-500">Task completed</span>
                 </div>
               )}
+
+              {/* Task failed indicator */}
+              {task?.status === 'failed' && !taskStream.isRunning && (
+                <div>
+                  {/* Show manus header if no assistant messages yet */}
+                  {!displayMessages.some(m => m.role === 'assistant') && (
+                    <div className="flex items-center gap-3 mb-3">
+                      <IconLogo size={24} className="text-text-primary" />
+                      <span className="text-[17px] font-semibold text-text-primary">manus</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 mt-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-red-500">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                      <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                    <span className="text-[14px] text-red-500">Task failed - please try again</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <div ref={messagesEndRef} />
@@ -761,43 +1020,63 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
               {previewCollapsed ? (
                 <div className="relative pt-[64px]">
                   {/* Floating thumbnail - Manus style */}
+                  {/* Priority: Browser (if browser-use tool OR has screenshot) > Terminal > Editor > Empty terminal */}
                   <div
                     onClick={() => onOpenPanel?.('browser')}
                     className="absolute left-[17px] bottom-[17px] w-[128px] h-[80px] rounded-xl border border-[#4a4a4a] overflow-hidden cursor-pointer z-10 pointer-events-auto shadow-lg group"
                   >
-                    {displayBrowserScreenshotUrl ? (
+                    {isBrowserUseTool(currentToolName) || (currentToolKind === 'browser' || currentToolKind === 'fetch') ? (
+                      /* Browser-use tool - always show browser view */
+                      displayBrowserScreenshotUrl ? (
+                        <img
+                          src={displayBrowserScreenshotUrl}
+                          alt="Browser preview"
+                          className="w-full h-full object-cover bg-white"
+                        />
+                      ) : (
+                        /* Browser placeholder while loading */
+                        <div className="h-full bg-[#1a1a1a] flex items-center justify-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <IconGlobe size={16} className="text-text-quaternary" />
+                            <span className="text-[6px] text-text-quaternary">Browser</span>
+                          </div>
+                        </div>
+                      )
+                    ) : (currentToolKind === 'execute' || currentToolKind === 'bash' || currentToolKind === 'terminal' || currentToolKind === 'code') && (currentToolCommand || recentTerminalCommands.length > 0) ? (
+                      /* Terminal mini preview - shows recent commands like real terminal */
+                      <div className="h-full bg-[#1a1a1a] p-1.5 overflow-hidden">
+                        <div className="font-mono text-[5px] leading-[7px]">
+                          {recentTerminalCommands.slice(-2).map((cmd, i) => (
+                            <div key={i} className="truncate">
+                              <span className="text-emerald-400/70">ubuntu@sandbox:~</span>
+                              <span className="text-[#666]"> $ {cmd.length > 20 ? cmd.slice(0, 20) + '...' : cmd}</span>
+                            </div>
+                          ))}
+                          {currentToolCommand && !recentTerminalCommands.includes(currentToolCommand) && (
+                            <div className="truncate">
+                              <span className="text-emerald-400">ubuntu@sandbox:~</span>
+                              <span className="text-[#888]"> $ {currentToolCommand.length > 20 ? currentToolCommand.slice(0, 20) + '...' : currentToolCommand}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (currentToolKind === 'read' || currentToolKind === 'edit' || currentToolKind === 'write') && (currentToolContent || currentToolFilePath) ? (
+                      /* Editor mini preview - when last tool was editor */
+                      <div className="h-full bg-[#1a1a1a] overflow-hidden">
+                        <div className="bg-[#252525] px-2 py-1 border-b border-[#333]">
+                          <span className="text-[6px] text-[#888] truncate block">{currentToolFilePath?.split('/').pop() || 'file'}</span>
+                        </div>
+                        <div className="p-2 font-mono text-[6px] leading-tight text-[#888] line-clamp-4">
+                          {currentToolContent?.slice(0, 200) || '// Loading...'}
+                        </div>
+                      </div>
+                    ) : displayBrowserScreenshotUrl ? (
+                      /* Browser screenshot - if available */
                       <img
                         src={displayBrowserScreenshotUrl}
                         alt="Browser preview"
                         className="w-full h-full object-cover bg-white"
                       />
-                    ) : (currentToolKind === 'execute' || currentToolKind === 'bash' || currentToolKind === 'terminal' || currentToolKind === 'code') && (taskStream.currentToolCommand || taskStream.currentToolContent) ? (
-                      /* Terminal mini preview */
-                      <div className="h-full bg-[#1a1a1a] p-2 overflow-hidden">
-                        <div className="font-mono text-[6px] leading-tight">
-                          {taskStream.currentToolCommand && (
-                            <div className="flex">
-                              <span className="text-emerald-400">$</span>
-                              <span className="text-white ml-1 truncate">{taskStream.currentToolCommand.slice(0, 40)}</span>
-                            </div>
-                          )}
-                          {taskStream.currentToolContent && (
-                            <div className="text-[#888] mt-0.5 line-clamp-4">
-                              {taskStream.currentToolContent.slice(0, 200)}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ) : (currentToolKind === 'read' || currentToolKind === 'edit') && (taskStream.currentToolContent || taskStream.currentToolFilePath) ? (
-                      /* Editor mini preview */
-                      <div className="h-full bg-[#1a1a1a] overflow-hidden">
-                        <div className="bg-[#252525] px-2 py-1 border-b border-[#333]">
-                          <span className="text-[6px] text-[#888] truncate block">{taskStream.currentToolFilePath?.split('/').pop() || 'file'}</span>
-                        </div>
-                        <div className="p-2 font-mono text-[6px] leading-tight text-[#888] line-clamp-4">
-                          {taskStream.currentToolContent?.slice(0, 200) || '// Loading...'}
-                        </div>
-                      </div>
                     ) : (
                       /* Default: show empty terminal like right panel */
                       <div className="h-full bg-[#1a1a1a] p-2 overflow-hidden">
@@ -836,19 +1115,27 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                               {currentProgressStep.content}
                             </span>
                           </>
-                        ) : (
-                          /* No task progress - show tool status */
+                        ) : currentToolKind || isBrowserUseTool(currentToolName) ? (
+                          /* No task progress - show tool status (valid tool kind or browser-use) */
                           <div className="flex items-center gap-2 flex-1">
                             <div className="w-5 h-5 rounded-md bg-[#3a3a3a] flex items-center justify-center flex-shrink-0">
-                              {getToolIcon(currentToolKind, 12, "text-text-secondary")}
+                              {getToolIcon(currentToolKind, currentToolName, 12, "text-text-secondary")}
                             </div>
                             <span className="text-[13px] text-text-tertiary">
                               {isRunning ? (
-                                <>Manus is using <span className="text-text-primary font-medium">{getToolDisplayName(currentToolKind)}</span></>
+                                <>Manus is using <span className="text-text-primary font-medium">{getToolDisplayName(currentToolKind, currentToolName)}</span></>
                               ) : (
-                                <>Manus used <span className="text-text-primary font-medium">{getToolDisplayName(currentToolKind)}</span></>
+                                <>Manus used <span className="text-text-primary font-medium">{getToolDisplayName(currentToolKind, currentToolName)}</span></>
                               )}
                             </span>
+                          </div>
+                        ) : (
+                          /* No progress and no tool kind - show generic status */
+                          <div className="flex items-center gap-2 flex-1">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-green-500 flex-shrink-0">
+                              <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            <span className="text-[13px] text-text-primary">Task completed</span>
                           </div>
                         )}
                       </div>
@@ -870,43 +1157,46 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
               ) : (
                 <div className="rounded-2xl border border-[#444444] bg-[#2f2f2f] p-4 pointer-events-auto shadow-sm">
                   <div className="flex items-start gap-4">
+                    {/* Priority: Terminal/Editor (based on last tool) > Screenshot > Empty terminal */}
                     <div
                       onClick={() => onOpenPanel?.('browser')}
                       className="relative w-[128px] h-[80px] rounded-xl border border-[#4a4a4a] overflow-hidden cursor-pointer group flex-shrink-0 shadow-sm"
                     >
-                      {displayBrowserScreenshotUrl ? (
+                      {(currentToolKind === 'execute' || currentToolKind === 'bash' || currentToolKind === 'terminal' || currentToolKind === 'code') && (currentToolCommand || recentTerminalCommands.length > 0) ? (
+                        /* Terminal mini preview - shows recent commands like real terminal */
+                        <div className="h-full bg-[#1a1a1a] p-1.5 overflow-hidden">
+                          <div className="font-mono text-[5px] leading-[7px]">
+                            {recentTerminalCommands.slice(-2).map((cmd, i) => (
+                              <div key={i} className="truncate">
+                                <span className="text-emerald-400/70">ubuntu@sandbox:~</span>
+                                <span className="text-[#666]"> $ {cmd.length > 20 ? cmd.slice(0, 20) + '...' : cmd}</span>
+                              </div>
+                            ))}
+                            {currentToolCommand && !recentTerminalCommands.includes(currentToolCommand) && (
+                              <div className="truncate">
+                                <span className="text-emerald-400">ubuntu@sandbox:~</span>
+                                <span className="text-[#888]"> $ {currentToolCommand.length > 20 ? currentToolCommand.slice(0, 20) + '...' : currentToolCommand}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (currentToolKind === 'read' || currentToolKind === 'edit' || currentToolKind === 'write') && (currentToolContent || currentToolFilePath) ? (
+                        /* Editor mini preview - highest priority when last tool was editor */
+                        <div className="h-full bg-[#1a1a1a] overflow-hidden">
+                          <div className="bg-[#252525] px-2 py-1 border-b border-[#333]">
+                            <span className="text-[6px] text-[#888] truncate block">{currentToolFilePath?.split('/').pop() || 'file'}</span>
+                          </div>
+                          <div className="p-2 font-mono text-[6px] leading-tight text-[#888] line-clamp-4">
+                            {currentToolContent?.slice(0, 200) || '// Loading...'}
+                          </div>
+                        </div>
+                      ) : displayBrowserScreenshotUrl ? (
+                        /* Browser screenshot - fallback when last tool was browser or no tool content */
                         <img
                           src={displayBrowserScreenshotUrl}
                           alt="Browser preview"
                           className="w-full h-full object-cover bg-white"
                         />
-                      ) : (currentToolKind === 'execute' || currentToolKind === 'bash' || currentToolKind === 'terminal' || currentToolKind === 'code') && (taskStream.currentToolCommand || taskStream.currentToolContent) ? (
-                        /* Terminal mini preview */
-                        <div className="h-full bg-[#1a1a1a] p-2 overflow-hidden">
-                          <div className="font-mono text-[6px] leading-tight">
-                            {taskStream.currentToolCommand && (
-                              <div className="flex">
-                                <span className="text-emerald-400">$</span>
-                                <span className="text-white ml-1 truncate">{taskStream.currentToolCommand.slice(0, 40)}</span>
-                              </div>
-                            )}
-                            {taskStream.currentToolContent && (
-                              <div className="text-[#888] mt-0.5 line-clamp-4">
-                                {taskStream.currentToolContent.slice(0, 200)}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ) : (currentToolKind === 'read' || currentToolKind === 'edit') && (taskStream.currentToolContent || taskStream.currentToolFilePath) ? (
-                        /* Editor mini preview */
-                        <div className="h-full bg-[#1a1a1a] overflow-hidden">
-                          <div className="bg-[#252525] px-2 py-1 border-b border-[#333]">
-                            <span className="text-[6px] text-[#888] truncate block">{taskStream.currentToolFilePath?.split('/').pop() || 'file'}</span>
-                          </div>
-                          <div className="p-2 font-mono text-[6px] leading-tight text-[#888] line-clamp-4">
-                            {taskStream.currentToolContent?.slice(0, 200) || '// Loading...'}
-                          </div>
-                        </div>
                       ) : (
                         /* Default: show empty terminal like right panel */
                         <div className="h-full bg-[#1a1a1a] p-2 overflow-hidden">
@@ -928,16 +1218,27 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                         Manus's computer
                       </h3>
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-md bg-[#3a3a3a] flex items-center justify-center">
-                          {getToolIcon(currentToolKind, 14, "text-text-secondary")}
-                        </div>
-                        <span className="text-[13px] text-text-tertiary">
-                          {isRunning ? (
-                            <>Manus is using <span className="text-text-primary font-medium">{getToolDisplayName(currentToolKind)}</span></>
-                          ) : (
-                            <>Manus used <span className="text-text-primary font-medium">{getToolDisplayName(currentToolKind)}</span></>
-                          )}
-                        </span>
+                        {currentToolKind || isBrowserUseTool(currentToolName) ? (
+                          <>
+                            <div className="w-6 h-6 rounded-md bg-[#3a3a3a] flex items-center justify-center">
+                              {getToolIcon(currentToolKind, currentToolName, 14, "text-text-secondary")}
+                            </div>
+                            <span className="text-[13px] text-text-tertiary">
+                              {isRunning ? (
+                                <>Manus is using <span className="text-text-primary font-medium">{getToolDisplayName(currentToolKind, currentToolName)}</span></>
+                              ) : (
+                                <>Manus used <span className="text-text-primary font-medium">{getToolDisplayName(currentToolKind, currentToolName)}</span></>
+                              )}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-green-500">
+                              <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            <span className="text-[13px] text-text-primary">Task completed</span>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -1010,4 +1311,33 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
       />
     </div>
   );
+
+  // When renderRightPanel is true, return both panels as flex siblings
+  if (renderRightPanel) {
+    return (
+      <>
+        {mainContent}
+        {/* Right Panel - shares streaming data directly (same source as preview) */}
+        <div className={rightPanelOpen ? "w-1/2 flex flex-col overflow-hidden" : "hidden"}>
+          <RightPanelTabs
+            project={project}
+            task={task}
+            onClose={onClosePanel || (() => {})}
+            defaultTab={defaultPanelTab}
+            isOpen={rightPanelOpen}
+            // Pass streaming data directly - same values preview uses
+            toolKind={currentToolKind}
+            toolName={currentToolName}
+            toolContent={currentToolContent}
+            toolFilePath={currentToolFilePath}
+            toolCommand={currentToolCommand}
+            browserLiveUrl={displayBrowserLiveUrl}
+            browserScreenshotUrl={displayBrowserScreenshotUrl}
+          />
+        </div>
+      </>
+    );
+  }
+
+  return mainContent;
 }

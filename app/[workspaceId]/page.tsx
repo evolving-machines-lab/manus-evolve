@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { TaskView } from '@/components/task/task-view';
-import { RightPanelTabs } from '@/components/workspace/right-panel-tabs';
 import { IconSpinner } from '@/components/ui/icons';
 import { useStore } from '@/lib/store';
 import type { Project, Task } from '@/lib/types';
@@ -14,20 +13,14 @@ export default function ProjectPage() {
   const projectId = params.workspaceId as string;
 
   const {
-    projects,
     setProjects,
     currentProject,
     setCurrentProject,
-    tasks,
     setTasks,
     currentTask,
-    setCurrentTask,
   } = useStore();
 
-  // Check if we already have this project in the store
-  const hasProjectInStore = currentProject?.id === projectId;
-
-  const [loading, setLoading] = useState(!hasProjectInStore);
+  const [loading, setLoading] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [defaultTab, setDefaultTab] = useState<'files' | 'artifacts' | 'browser'>('browser');
 
@@ -92,28 +85,18 @@ export default function ProjectPage() {
     return null;
   }
 
+  // TaskView handles both main content and right panel internally (shares streaming data)
   return (
     <div className="flex-1 flex overflow-hidden">
-      {/* Main content area - 50% when right panel is open, full otherwise */}
-      <div className={rightPanelOpen ? "w-1/2 flex flex-col overflow-hidden" : "flex-1 flex flex-col overflow-hidden"}>
-        <TaskView
-          task={currentTask}
-          project={currentProject}
-          onOpenPanel={handleOpenPanel}
-          rightPanelOpen={rightPanelOpen}
-        />
-      </div>
-
-      {/* Right Panel with tabs - 50% width, always mounted to avoid flicker */}
-      <div className={rightPanelOpen ? "w-1/2 flex flex-col overflow-hidden" : "hidden"}>
-        <RightPanelTabs
-          project={currentProject}
-          task={currentTask}
-          onClose={() => setRightPanelOpen(false)}
-          defaultTab={defaultTab}
-          isOpen={rightPanelOpen}
-        />
-      </div>
+      <TaskView
+        task={currentTask}
+        project={currentProject}
+        onOpenPanel={handleOpenPanel}
+        rightPanelOpen={rightPanelOpen}
+        onClosePanel={() => setRightPanelOpen(false)}
+        defaultPanelTab={defaultTab}
+        renderRightPanel={true}
+      />
     </div>
   );
 }

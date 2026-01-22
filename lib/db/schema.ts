@@ -80,6 +80,7 @@ export const messages = sqliteTable('messages', {
   contentType: text('content_type').$type<ContentType>().notNull().default('text'),
   content: text('content').notNull(),
   mimeType: text('mime_type'),
+  parts: text('parts'), // JSON: [{type:'text',content:string}|{type:'tool_call',toolCallId:string}]
   createdAt: text('created_at').notNull().default(new Date().toISOString()),
 });
 
@@ -94,6 +95,9 @@ export const toolCalls = sqliteTable('tool_calls', {
   status: text('status').$type<ToolCallStatus>().notNull().default('pending'),
   input: text('input'), // JSON stringified
   output: text('output'), // JSON stringified
+  outputContent: text('output_content'), // Text content from tool (code, terminal output, etc.) - truncated if too long
+  filePath: text('file_path'), // File path for file operations (extracted from locations or input)
+  command: text('command'), // Command for terminal operations (extracted from input)
   locations: text('locations'), // JSON stringified array of {path, line}
   createdAt: text('created_at').notNull().default(new Date().toISOString()),
   updatedAt: text('updated_at').notNull().default(new Date().toISOString()),

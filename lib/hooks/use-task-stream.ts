@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import type { Message, ToolCall, ProgressItem, Artifact } from '@/lib/types';
+import type { Message, ToolCall, ProgressItem, Artifact, MessagePart } from '@/lib/types';
 import { nanoid } from 'nanoid';
 
 export interface TaskStreamState {
@@ -55,6 +55,8 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
     id: string;
     content: string;
     toolCalls: ToolCall[];
+    parts: MessagePart[];
+    pendingText: string;  // Text accumulated since last tool call
   } | null>(null);
 
   // Run a task with streaming
@@ -180,15 +182,25 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
                 id: data.messageId,
                 content: '',
                 toolCalls: [],
+                parts: [],
+                pendingText: '',
               };
             }
             currentMessageRef.current.content += data.content;
+            currentMessageRef.current.pendingText += data.content;
 
-            // Update state with accumulated message
+            // Update state with accumulated message (parts will be finalized when tool calls come in)
             setState((prev) => {
               const existingIdx = prev.messages.findIndex(
                 (m) => m.id === currentMessageRef.current?.id
               );
+
+              // Build current parts: existing parts + pending text
+              const currentParts: MessagePart[] = [
+                ...currentMessageRef.current!.parts,
+                ...(currentMessageRef.current!.pendingText ? [{ type: 'text' as const, content: currentMessageRef.current!.pendingText }] : []),
+              ];
+
               const message: Message = {
                 id: currentMessageRef.current!.id,
                 role: 'assistant',
@@ -196,6 +208,7 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
                 content: currentMessageRef.current!.content,
                 timestamp: new Date().toISOString(),
                 toolCalls: currentMessageRef.current!.toolCalls,
+                parts: currentParts,
               };
 
               if (existingIdx >= 0) {
@@ -223,9 +236,23 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
             break;
 
           case 'tool_call':
-            // Add tool call to current message
+            // Add tool call to current message and track part ordering
             if (currentMessageRef.current) {
-              currentMessageRef.current.toolCalls.push(data as ToolCall);
+              const toolCall = data as ToolCall;
+              currentMessageRef.current.toolCalls.push(toolCall);
+
+              // Finalize pending text as a part, then add tool call part
+              if (currentMessageRef.current.pendingText) {
+                currentMessageRef.current.parts.push({
+                  type: 'text',
+                  content: currentMessageRef.current.pendingText,
+                });
+                currentMessageRef.current.pendingText = '';
+              }
+              currentMessageRef.current.parts.push({
+                type: 'tool_call',
+                toolCall: toolCall,
+              });
             }
             options.onToolCall?.(data as ToolCall);
 
@@ -255,6 +282,7 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
                 newMessages[idx] = {
                   ...newMessages[idx],
                   toolCalls: currentMessageRef.current.toolCalls,
+                  parts: currentMessageRef.current.parts,
                 };
                 return { ...prev, messages: newMessages, ...toolUpdate };
               }
@@ -264,7 +292,7 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
             break;
 
           case 'tool_call_update':
-            // Update tool call status
+            // Update tool call status in both toolCalls array and parts array
             if (currentMessageRef.current) {
               const toolCallIdx = currentMessageRef.current.toolCalls.findIndex(
                 (tc) => tc.toolCallId === data.toolCallId
@@ -274,6 +302,19 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
                   ...currentMessageRef.current.toolCalls[toolCallIdx],
                   ...data,
                 };
+              }
+              // Also update in parts array
+              const partIdx = currentMessageRef.current.parts.findIndex(
+                (p) => p.type === 'tool_call' && p.toolCall.toolCallId === data.toolCallId
+              );
+              if (partIdx >= 0) {
+                const part = currentMessageRef.current.parts[partIdx];
+                if (part.type === 'tool_call') {
+                  currentMessageRef.current.parts[partIdx] = {
+                    type: 'tool_call',
+                    toolCall: { ...part.toolCall, ...data },
+                  };
+                }
               }
             }
 
@@ -294,9 +335,21 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
                 );
                 if (tcIdx >= 0) {
                   newToolCalls[tcIdx] = { ...newToolCalls[tcIdx], ...data };
+                  // Also update parts
+                  const newParts = [...(newMessages[msgIdx].parts || [])];
+                  const partIdx = newParts.findIndex(
+                    (p) => p.type === 'tool_call' && p.toolCall.toolCallId === data.toolCallId
+                  );
+                  if (partIdx >= 0 && newParts[partIdx].type === 'tool_call') {
+                    newParts[partIdx] = {
+                      type: 'tool_call',
+                      toolCall: { ...newParts[partIdx].toolCall, ...data },
+                    };
+                  }
                   newMessages[msgIdx] = {
                     ...newMessages[msgIdx],
                     toolCalls: newToolCalls,
+                    parts: newParts,
                   };
                   return { ...prev, messages: newMessages, ...contentUpdate };
                 }
@@ -341,8 +394,16 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
             break;
 
           case 'done':
-            // Finalize current message
+            // Finalize current message - include any remaining pending text in parts
             if (currentMessageRef.current && currentMessageRef.current.content) {
+              // Add any remaining pending text to parts
+              const finalParts = [...currentMessageRef.current.parts];
+              if (currentMessageRef.current.pendingText) {
+                finalParts.push({
+                  type: 'text',
+                  content: currentMessageRef.current.pendingText,
+                });
+              }
               options.onMessage?.({
                 id: currentMessageRef.current.id,
                 role: 'assistant',
@@ -350,6 +411,7 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
                 content: currentMessageRef.current.content,
                 timestamp: new Date().toISOString(),
                 toolCalls: currentMessageRef.current.toolCalls,
+                parts: finalParts,
               });
             }
             currentMessageRef.current = null;

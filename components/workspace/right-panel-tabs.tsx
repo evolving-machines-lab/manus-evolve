@@ -23,6 +23,7 @@ function getToolIcon(kind?: string, size = 16, className = "text-text-tertiary")
       return <IconSearch size={size} className={className} />;
     case 'read':
     case 'edit':
+    case 'write':
     case 'delete':
     case 'move':
       return <IconEdit size={size} className={className} />;
@@ -45,6 +46,7 @@ function getToolDisplayName(kind?: string): string {
       return 'Search';
     case 'read':
     case 'edit':
+    case 'write':
     case 'delete':
     case 'move':
       return 'Editor';
@@ -82,12 +84,15 @@ interface RightPanelTabsProps {
   preTaskFiles?: PreTaskFile[];
   onPreTaskFilesChange?: (files: PreTaskFile[]) => void;
   onPreTaskFilesAdded?: (files: File[]) => void;
-  // Tool state for code/terminal viewers
+  // Streaming data passed directly from TaskView (same values preview uses)
+  // When provided, these take priority over store/task fallback
   toolKind?: string;
+  toolName?: string;
   toolContent?: string;
   toolFilePath?: string;
   toolCommand?: string;
-  toolName?: string;
+  browserLiveUrl?: string;
+  browserScreenshotUrl?: string;
 }
 
 // Icon for artifacts/output
@@ -110,22 +115,42 @@ export function RightPanelTabs({
   preTaskFiles,
   onPreTaskFilesChange,
   onPreTaskFilesAdded,
-  toolKind,
-  toolContent,
-  toolFilePath,
-  toolCommand,
-  toolName,
+  // Streaming props from TaskView (takes priority when provided)
+  toolKind: streamingToolKind,
+  toolName: streamingToolName,
+  toolContent: streamingToolContent,
+  toolFilePath: streamingToolFilePath,
+  toolCommand: streamingToolCommand,
+  browserLiveUrl: streamingBrowserLiveUrl,
+  browserScreenshotUrl: streamingBrowserScreenshotUrl,
 }: RightPanelTabsProps) {
   const { rightPanelView, setRightPanelView, toolState } = useStore();
   const [activeTab, setActiveTab] = useState<'files' | 'artifacts' | 'browser'>(defaultTab);
   const [progressCollapsed, setProgressCollapsed] = useState(false);
 
-  // Use props if provided, otherwise fall back to store
-  const effectiveToolKind = toolKind ?? toolState.kind;
-  const effectiveToolContent = toolContent ?? toolState.content;
-  const effectiveToolFilePath = toolFilePath ?? toolState.filePath;
-  const effectiveToolCommand = toolCommand ?? toolState.command;
-  const effectiveToolName = toolName ?? toolState.name;
+  // Extract last tool call from task messages - SOURCE OF TRUTH for persisted state
+  // This is computed identically to TaskView to ensure preview and panel always match
+  const lastToolCallFromTask = (() => {
+    if (!task?.messages) return null;
+    const allToolCalls = task.messages
+      .flatMap(m => m.toolCalls || []);
+    return allToolCalls.length > 0 ? allToolCalls[allToolCalls.length - 1] : null;
+  })();
+
+  const isTaskRunning = task?.status === 'running';
+
+  // Tool state priority: streaming props (direct from TaskView) > store > task data
+  // When rendered inside TaskView, streaming props are provided (same values as preview)
+  // When rendered standalone, falls back to store/task data
+  const effectiveToolKind = streamingToolKind ?? toolState.kind ?? lastToolCallFromTask?.kind;
+  const effectiveToolContent = streamingToolContent ?? toolState.content ?? lastToolCallFromTask?.outputContent;
+  const effectiveToolFilePath = streamingToolFilePath ?? toolState.filePath ?? lastToolCallFromTask?.filePath;
+  const effectiveToolCommand = streamingToolCommand ?? toolState.command ?? lastToolCallFromTask?.command;
+  const effectiveToolName = streamingToolName ?? toolState.name ?? lastToolCallFromTask?.name;
+
+  // Browser URLs: streaming props > store > task data
+  const effectiveBrowserLiveUrl = streamingBrowserLiveUrl ?? toolState.browserLiveUrl ?? task?.browserLiveUrl;
+  const effectiveBrowserScreenshotUrl = streamingBrowserScreenshotUrl ?? toolState.browserScreenshotUrl ?? task?.browserScreenshotUrl;
 
   // Track previous isOpen state to detect when panel opens
   const wasOpenRef = useRef(isOpen);
@@ -212,7 +237,9 @@ export function RightPanelTabs({
               toolFilePath={effectiveToolFilePath}
               toolCommand={effectiveToolCommand}
               toolName={effectiveToolName}
-              isRunning={task?.status === 'running'}
+              isRunning={isTaskRunning}
+              browserLiveUrl={effectiveBrowserLiveUrl}
+              browserScreenshotUrl={effectiveBrowserScreenshotUrl}
             />
           )}
 

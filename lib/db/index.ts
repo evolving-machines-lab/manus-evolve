@@ -90,6 +90,7 @@ function ensureTablesExist() {
       content_type TEXT NOT NULL DEFAULT 'text',
       content TEXT NOT NULL,
       mime_type TEXT,
+      parts TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -104,6 +105,9 @@ function ensureTablesExist() {
       status TEXT NOT NULL DEFAULT 'pending',
       input TEXT,
       output TEXT,
+      output_content TEXT,
+      file_path TEXT,
+      command TEXT,
       locations TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -285,9 +289,43 @@ function ensureNewTables() {
   }
 }
 
+// Check if a column exists in a table
+function columnExists(tableName: string, columnName: string): boolean {
+  const columns = sqlite.prepare(`PRAGMA table_info(${tableName})`).all() as { name: string }[];
+  return columns.some(col => col.name === columnName);
+}
+
+// Run migrations to add new columns to existing tables
+function runMigrations() {
+  // Add new columns to tool_calls table
+  if (tableExists('tool_calls')) {
+    if (!columnExists('tool_calls', 'output_content')) {
+      console.log('Adding output_content column to tool_calls...');
+      sqlite.exec('ALTER TABLE tool_calls ADD COLUMN output_content TEXT');
+    }
+    if (!columnExists('tool_calls', 'file_path')) {
+      console.log('Adding file_path column to tool_calls...');
+      sqlite.exec('ALTER TABLE tool_calls ADD COLUMN file_path TEXT');
+    }
+    if (!columnExists('tool_calls', 'command')) {
+      console.log('Adding command column to tool_calls...');
+      sqlite.exec('ALTER TABLE tool_calls ADD COLUMN command TEXT');
+    }
+  }
+
+  // Add parts column to messages table
+  if (tableExists('messages')) {
+    if (!columnExists('messages', 'parts')) {
+      console.log('Adding parts column to messages...');
+      sqlite.exec('ALTER TABLE messages ADD COLUMN parts TEXT');
+    }
+  }
+}
+
 // Initialize database on module load
 ensureTablesExist();
 ensureNewTables();
+runMigrations();
 ensureDefaultUser();
 seedSkills();
 seedIntegrations();

@@ -144,6 +144,11 @@ export async function POST(
       let currentThoughtContent = '';
       let sessionIdSaved = false;
 
+      // Track parts for interleaved display (text and tool calls in order)
+      type StoredPart = { type: 'text'; content: string } | { type: 'tool_call'; toolCallId: string };
+      let currentParts: StoredPart[] = [];
+      let pendingText = ''; // Text accumulated since last tool call
+
       // Helper to save sessionId to database as soon as sandbox is active
       const saveSessionIdIfNeeded = () => {
         if (sessionIdSaved) return;
@@ -188,6 +193,8 @@ export async function POST(
         if (!currentMessageId) {
           currentMessageId = nanoid();
           currentMessageContent = '';
+          currentParts = [];
+          pendingText = '';
           // Insert placeholder message immediately so tool calls can reference it
           db.insert(messages).values({
             id: currentMessageId,
@@ -197,6 +204,30 @@ export async function POST(
             content: '', // Will be updated at the end
             createdAt: new Date().toISOString(),
           }).run();
+        }
+      };
+
+      // Helper to flush message content to database (for persistence during navigation)
+      let lastFlushLength = 0;
+      const flushMessageContent = (includeParts = false) => {
+        if (currentMessageId && currentMessageContent && currentMessageContent.length > lastFlushLength) {
+          const updateData: Record<string, unknown> = { content: currentMessageContent };
+
+          // Include parts if requested (on tool call or completion)
+          if (includeParts) {
+            // Build current parts: existing parts + pending text
+            const partsToSave = [...currentParts];
+            if (pendingText) {
+              partsToSave.push({ type: 'text', content: pendingText });
+            }
+            updateData.parts = JSON.stringify(partsToSave);
+          }
+
+          db.update(messages)
+            .set(updateData)
+            .where(eq(messages.id, currentMessageId))
+            .run();
+          lastFlushLength = currentMessageContent.length;
         }
       };
 
@@ -213,10 +244,15 @@ export async function POST(
             // Start new message if needed
             ensureMessageExists();
             currentMessageContent += content;
+            pendingText += content; // Track for parts
             send('message_chunk', {
               messageId: currentMessageId,
               content,
             });
+            // Flush to DB periodically (every ~500 chars) so content persists if user navigates away
+            if (currentMessageContent.length - lastFlushLength > 500) {
+              flushMessageContent();
+            }
           }
         },
 
@@ -249,6 +285,44 @@ export async function POST(
           // Ensure message exists before inserting tool call
           ensureMessageExists();
 
+          // Finalize pending text as a part, then add tool call part
+          if (pendingText) {
+            currentParts.push({ type: 'text', content: pendingText });
+            pendingText = '';
+          }
+          currentParts.push({ type: 'tool_call', toolCallId: toolCall.toolCallId });
+
+          // Flush message content with parts (natural breakpoint)
+          flushMessageContent(true);
+
+          // Extract filePath from locations or input
+          let filePath: string | null = null;
+          if (toolCall.locations && toolCall.locations.length > 0) {
+            filePath = toolCall.locations[0].path;
+          } else if (toolCall.input && typeof toolCall.input === 'object') {
+            const input = toolCall.input as Record<string, unknown>;
+            if (typeof input.file_path === 'string') filePath = input.file_path;
+            else if (typeof input.path === 'string') filePath = input.path;
+          }
+
+          // Extract command for bash tools
+          let command: string | null = null;
+          if (toolCall.kind === 'execute' && toolCall.input && typeof toolCall.input === 'object') {
+            const input = toolCall.input as Record<string, unknown>;
+            if (typeof input.command === 'string') command = input.command;
+          }
+
+          // Extract outputContent for edit tools (content comes in initial tool_call, not update)
+          let outputContent: string | null = null;
+          if (toolCall.outputContent) {
+            const maxOutputLength = 50000;
+            outputContent = toolCall.outputContent;
+            if (outputContent.length > maxOutputLength) {
+              outputContent = outputContent.substring(0, maxOutputLength) + '\n[... output truncated ...]';
+            }
+            outputContent = outputContent.trim();
+          }
+
           db.insert(toolCalls).values({
             id: nanoid(),
             messageId: currentMessageId!, // Non-null: ensureMessageExists() guarantees this
@@ -259,6 +333,9 @@ export async function POST(
             status: toolCall.status as ToolCallStatus,
             input: toolCall.input ? JSON.stringify(toolCall.input) : null,
             locations: toolCall.locations ? JSON.stringify(toolCall.locations) : null,
+            filePath,
+            command,
+            outputContent,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           }).run();
@@ -273,7 +350,24 @@ export async function POST(
           };
           if (updates.status) updateData.status = updates.status;
           if (updates.title) updateData.title = updates.title;
-          if (updates.locations) updateData.locations = JSON.stringify(updates.locations);
+          if (updates.locations) {
+            updateData.locations = JSON.stringify(updates.locations);
+            // Also update filePath if not already set
+            if (updates.locations.length > 0) {
+              updateData.filePath = updates.locations[0].path;
+            }
+          }
+
+          // Use outputContent already extracted by evolve.ts
+          if (updates.outputContent) {
+            // Truncate to avoid database issues
+            const maxOutputLength = 50000;
+            let outputContent = updates.outputContent;
+            if (outputContent.length > maxOutputLength) {
+              outputContent = outputContent.substring(0, maxOutputLength) + '\n[... output truncated ...]';
+            }
+            updateData.outputContent = outputContent.trim();
+          }
 
           db.update(toolCalls)
             .set(updateData)
@@ -344,10 +438,19 @@ export async function POST(
           callbacks
         );
 
-        // Update accumulated message content in database
+        // Update accumulated message content in database with final parts
         if (currentMessageId && currentMessageContent) {
+          // Finalize parts: add any remaining pending text
+          const finalParts = [...currentParts];
+          if (pendingText) {
+            finalParts.push({ type: 'text', content: pendingText });
+          }
+
           db.update(messages)
-            .set({ content: currentMessageContent })
+            .set({
+              content: currentMessageContent,
+              parts: JSON.stringify(finalParts),
+            })
             .where(eq(messages.id, currentMessageId))
             .run();
         }
@@ -406,10 +509,12 @@ export async function POST(
         }
 
         // Update task with session ID and completed status
+        // Clear browserLiveUrl since VNC session is now dead (keep screenshot)
         db.update(tasks)
           .set({
             status: 'completed' as TaskStatus,
             sessionId: result.sessionId,
+            browserLiveUrl: null,  // VNC session expired, clear stale URL
             updatedAt: new Date().toISOString(),
           })
           .where(eq(tasks.id, taskId))
@@ -423,18 +528,27 @@ export async function POST(
       } catch (error) {
         console.error('Task execution error:', error);
 
-        // Update partial message content if any
+        // Update partial message content and parts if any
         if (currentMessageId && currentMessageContent) {
+          const finalParts = [...currentParts];
+          if (pendingText) {
+            finalParts.push({ type: 'text', content: pendingText });
+          }
           db.update(messages)
-            .set({ content: currentMessageContent })
+            .set({
+              content: currentMessageContent,
+              parts: JSON.stringify(finalParts),
+            })
             .where(eq(messages.id, currentMessageId))
             .run();
         }
 
         // Update task status to failed
+        // Clear browserLiveUrl since VNC session is now dead (keep screenshot)
         db.update(tasks)
           .set({
             status: 'failed' as TaskStatus,
+            browserLiveUrl: null,  // VNC session expired, clear stale URL
             updatedAt: new Date().toISOString(),
           })
           .where(eq(tasks.id, taskId))

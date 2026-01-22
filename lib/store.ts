@@ -75,4 +75,9 @@ export const useStore = create<AppState>((set) => ({
   sidebarCollapsed: false,
   setSidebarCollapsed: (collapsed: boolean) => set({ sidebarCollapsed: collapsed }),
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+
+  // Tool state for code/terminal viewers
+  toolState: {},
+  setToolState: (state) => set((prev) => ({ toolState: { ...prev.toolState, ...state } })),
+  clearToolState: () => set({ toolState: {} }),
 }));

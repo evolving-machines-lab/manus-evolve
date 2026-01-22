@@ -1,41 +1,131 @@
 'use client';
 
-import { IconGlobe } from '@/components/ui/icons';
+import { IconGlobe, IconTerminal, IconEdit } from '@/components/ui/icons';
+import { CodeViewer } from './code-viewer';
+import { TerminalViewer } from './terminal-viewer';
 import type { Task } from '@/lib/types';
 
 interface BrowserTabProps {
   task: Task | null;
+  // Tool state from streaming
+  toolKind?: string;
+  toolContent?: string;
+  toolFilePath?: string;
+  toolCommand?: string;
+  toolName?: string;
 }
 
-export function BrowserTab({ task }: BrowserTabProps) {
+export function BrowserTab({
+  task,
+  toolKind,
+  toolContent,
+  toolFilePath,
+  toolCommand,
+  toolName,
+}: BrowserTabProps) {
   const hasLiveUrl = !!task?.browserLiveUrl;
   const hasScreenshot = !!task?.browserScreenshotUrl;
+  const hasToolContent = !!toolContent;
 
-  return (
-    <div className="h-full flex flex-col">
-      {hasLiveUrl ? (
-        // Live VNC view
-        <iframe
-          src={task.browserLiveUrl}
-          className="w-full h-full border-0"
-          title="Live Browser View"
-          sandbox="allow-scripts allow-same-origin"
-        />
-      ) : hasScreenshot ? (
-        // Screenshot fallback
-        <div className="w-full h-full flex items-center justify-center bg-bg-subtle p-4">
-          <img
-            src={task.browserScreenshotUrl}
-            alt="Browser Screenshot"
-            className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
+  // Stable container to prevent layout shift
+  const containerClass = "h-full flex flex-col bg-[#2f2f2f]";
+
+  // Determine which view to show based on tool kind
+  const isEditorTool = toolKind === 'file' || toolKind === 'read' || toolKind === 'write' || toolKind === 'edit';
+  const isTerminalTool = toolKind === 'bash' || toolKind === 'terminal' || toolKind === 'code';
+  const isBrowserTool = toolKind === 'browser';
+
+  // Priority: Browser live > Tool content > Browser screenshot > Empty
+  // If browser tool with live URL, show browser
+  // If file/terminal tool with content, show code/terminal viewer
+  // Otherwise show screenshot or empty state
+
+  // Show browser for browser tool or when we have live URL
+  if (isBrowserTool || hasLiveUrl) {
+    if (hasLiveUrl) {
+      return (
+        <div className={containerClass}>
+          <iframe
+            src={task?.browserLiveUrl}
+            className="w-full h-full border-0"
+            title="Live Browser View"
+            sandbox="allow-scripts allow-same-origin"
           />
         </div>
-      ) : (
-        // Empty state
-        <div className="h-full flex flex-col items-center justify-center">
-          <IconGlobe size={32} className="text-text-quaternary" />
+      );
+    }
+    if (hasScreenshot) {
+      return (
+        <div className={`${containerClass} p-4`}>
+          <div className="flex-1 flex items-center justify-center bg-[#1e1e1e] rounded-xl border border-[#3a3a3a]">
+            <img
+              src={task?.browserScreenshotUrl}
+              alt="Browser Screenshot"
+              className="max-w-full max-h-full object-contain rounded-lg"
+            />
+          </div>
         </div>
+      );
+    }
+  }
+
+  // Show editor for file operations
+  if (isEditorTool && hasToolContent) {
+    return (
+      <div className={`${containerClass} p-4`}>
+        <CodeViewer
+          content={toolContent}
+          filePath={toolFilePath}
+        />
+      </div>
+    );
+  }
+
+  // Show terminal for bash/terminal operations
+  if (isTerminalTool && hasToolContent) {
+    return (
+      <div className={`${containerClass} p-4`}>
+        <TerminalViewer
+          content={toolContent}
+          command={toolCommand}
+          title={toolName}
+        />
+      </div>
+    );
+  }
+
+  // Fallback: Show screenshot if available
+  if (hasScreenshot) {
+    return (
+      <div className={`${containerClass} p-4`}>
+        <div className="flex-1 flex items-center justify-center bg-[#1e1e1e] rounded-xl border border-[#3a3a3a]">
+          <img
+            src={task?.browserScreenshotUrl}
+            alt="Browser Screenshot"
+            className="max-w-full max-h-full object-contain rounded-lg"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state with appropriate icon
+  return (
+    <div className={`${containerClass} items-center justify-center`}>
+      {isEditorTool ? (
+        <IconEdit size={32} className="text-text-quaternary" />
+      ) : isTerminalTool ? (
+        <IconTerminal size={32} className="text-text-quaternary" />
+      ) : (
+        <IconGlobe size={32} className="text-text-quaternary" />
       )}
+      <span className="text-[13px] text-text-quaternary mt-3">
+        {isEditorTool
+          ? 'No file content'
+          : isTerminalTool
+          ? 'No terminal output'
+          : 'No browser view'}
+      </span>
     </div>
   );
 }

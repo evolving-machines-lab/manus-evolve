@@ -198,6 +198,18 @@ export function setupEventHandlers(evolve: Evolve, callbacks: EvolveCallbacks): 
 
       case 'tool_call': {
         if (callbacks.onToolCall) {
+          // Extract file path and command from rawInput
+          let filePath: string | undefined;
+          let command: string | undefined;
+          const rawInput = update.rawInput as Record<string, unknown> | undefined;
+
+          if (rawInput) {
+            // File operations: path, file_path, filename
+            filePath = (rawInput.path || rawInput.file_path || rawInput.filename) as string | undefined;
+            // Terminal operations: command, cmd
+            command = (rawInput.command || rawInput.cmd) as string | undefined;
+          }
+
           callbacks.onToolCall({
             id: update.toolCallId,
             toolCallId: update.toolCallId,
@@ -206,6 +218,8 @@ export function setupEventHandlers(evolve: Evolve, callbacks: EvolveCallbacks): 
             kind: update.kind as ToolKind,
             status: update.status as 'pending' | 'in_progress',
             input: update.rawInput,
+            filePath,
+            command,
             locations: update.locations as ToolCallLocation[],
           });
         }
@@ -213,23 +227,34 @@ export function setupEventHandlers(evolve: Evolve, callbacks: EvolveCallbacks): 
       }
 
       case 'tool_call_update': {
+        // Extract text content from tool output
+        let outputContent: string | undefined;
+        if (update.content) {
+          const textParts: string[] = [];
+          for (const c of update.content) {
+            if (c.type === 'content' && c.content?.type === 'text' && c.content.text) {
+              textParts.push(c.content.text);
+            }
+          }
+          if (textParts.length > 0) {
+            outputContent = textParts.join('\n');
+          }
+        }
+
         if (callbacks.onToolCallUpdate) {
           callbacks.onToolCallUpdate(update.toolCallId, {
             status: update.status as 'completed' | 'failed' | undefined,
             title: update.title,
             locations: update.locations as ToolCallLocation[],
+            outputContent,
           });
         }
 
         // Extract browser URLs from tool content
-        if (callbacks.onBrowserUrl && update.content) {
-          for (const c of update.content) {
-            if (c.type === 'content' && c.content?.type === 'text' && c.content.text) {
-              const urls = extractBrowserUseUrls(c.content.text);
-              if (urls.liveUrl || urls.screenshotUrl) {
-                callbacks.onBrowserUrl(urls.liveUrl, urls.screenshotUrl);
-              }
-            }
+        if (callbacks.onBrowserUrl && outputContent) {
+          const urls = extractBrowserUseUrls(outputContent);
+          if (urls.liveUrl || urls.screenshotUrl) {
+            callbacks.onBrowserUrl(urls.liveUrl, urls.screenshotUrl);
           }
         }
         break;

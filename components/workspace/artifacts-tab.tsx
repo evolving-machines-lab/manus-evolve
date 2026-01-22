@@ -74,11 +74,12 @@ export function ArtifactsTab({ task }: ArtifactsTabProps) {
   if (!task) {
     return (
       <div className="h-full flex flex-col items-center justify-center">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-quaternary">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[#555]">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
           <polyline points="7 10 12 15 17 10" />
           <line x1="12" y1="15" x2="12" y2="3" />
         </svg>
+        <span className="text-[14px] text-[#888] mt-3">No artifacts yet</span>
       </div>
     );
   }
@@ -86,11 +87,12 @@ export function ArtifactsTab({ task }: ArtifactsTabProps) {
   if (artifacts.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-quaternary">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[#555]">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
           <polyline points="7 10 12 15 17 10" />
           <line x1="12" y1="15" x2="12" y2="3" />
         </svg>
+        <span className="text-[14px] text-[#888] mt-3">No artifacts yet</span>
       </div>
     );
   }
@@ -98,31 +100,31 @@ export function ArtifactsTab({ task }: ArtifactsTabProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="px-4 pt-4 pb-2">
-        <span className="text-[13px] text-text-tertiary">
+      <div className="px-4 pt-4 pb-3">
+        <span className="text-[14px] font-medium text-[#aaa]">
           {artifacts.length} {artifacts.length === 1 ? 'artifact' : 'artifacts'}
         </span>
       </div>
 
       {/* Artifacts list */}
-      <div className="flex-1 overflow-y-auto px-2 pb-2">
+      <div className="flex-1 overflow-y-auto px-3 pb-3">
         <div className="space-y-1">
           {artifacts.map((artifact) => (
             <div
               key={artifact.id}
-              className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-bg-overlay transition-colors"
+              className="group flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-[#3a3a3a] transition-colors"
             >
               <ArtifactIcon type={artifact.type} />
               <div className="flex-1 min-w-0">
-                <p className="text-[14px] text-text-primary truncate">{artifact.name}</p>
-                <p className="text-[12px] text-text-quaternary">{formatBytes(artifact.size)}</p>
+                <p className="text-[14px] font-medium text-white truncate">{artifact.name}</p>
+                <p className="text-[12px] text-[#888]">{formatBytes(artifact.size)}</p>
               </div>
               <button
                 onClick={() => handleDownload(artifact)}
-                className="opacity-0 group-hover:opacity-100 p-1.5 text-text-tertiary hover:text-text-primary transition-all"
+                className="opacity-0 group-hover:opacity-100 p-2 text-[#888] hover:text-white hover:bg-[#454545] rounded-lg transition-all"
                 title="Download"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />

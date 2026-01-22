@@ -95,17 +95,15 @@ export default function StandaloneTaskPage() {
         />
       </div>
 
-      {/* Right Panel with tabs - 50% width */}
-      {rightPanelOpen && (
-        <div className="w-1/2 flex flex-col overflow-hidden">
-          <RightPanelTabs
-            project={null}
-            task={currentTask}
-            onClose={() => setRightPanelOpen(false)}
-            defaultTab={defaultTab}
-          />
-        </div>
-      )}
+      {/* Right Panel with tabs - 50% width, always mounted to avoid flicker */}
+      <div className={rightPanelOpen ? "w-1/2 flex flex-col overflow-hidden" : "hidden"}>
+        <RightPanelTabs
+          project={null}
+          task={currentTask}
+          onClose={() => setRightPanelOpen(false)}
+          defaultTab={defaultTab}
+        />
+      </div>
     </div>
   );
 }

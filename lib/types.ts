@@ -61,11 +61,14 @@ export interface ToolCall {
   id: string;
   toolCallId: string;  // Evolve's toolCallId for updates
   name: string;
-  title?: string;      // Human-readable title
+  title?: string;      // Human-readable title (e.g., "Creating file foo.py")
   kind: ToolKind;
   status: 'pending' | 'in_progress' | 'completed' | 'failed';
   input?: unknown;
   output?: unknown;
+  outputContent?: string;  // Text content from tool execution (code, terminal output, etc.)
+  filePath?: string;       // File path for file operations
+  command?: string;        // Command for terminal operations
   locations?: ToolCallLocation[];
 }
 
@@ -139,6 +142,17 @@ export interface AppState {
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebar: () => void;
+
+  // Tool state for code/terminal viewers
+  toolState: {
+    kind?: string;
+    content?: string;
+    filePath?: string;
+    command?: string;
+    name?: string;
+  };
+  setToolState: (state: Partial<AppState['toolState']>) => void;
+  clearToolState: () => void;
 }
 
 // Evolve SDK event types

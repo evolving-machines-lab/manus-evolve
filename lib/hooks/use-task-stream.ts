@@ -17,6 +17,11 @@ export interface TaskStreamState {
   // Tool call tracking for preview visibility
   hasToolCalls: boolean;
   currentToolName?: string;
+  currentToolKind?: string;
+  // Tool output content for code/terminal viewers
+  currentToolContent?: string;
+  currentToolFilePath?: string;
+  currentToolCommand?: string;
 }
 
 export interface UseTaskStreamOptions {
@@ -39,6 +44,10 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
     currentThought: '',
     hasToolCalls: false,
     currentToolName: undefined,
+    currentToolKind: undefined,
+    currentToolContent: undefined,
+    currentToolFilePath: undefined,
+    currentToolCommand: undefined,
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -70,6 +79,10 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
         currentThought: '',
         hasToolCalls: false, // Reset tool call tracking for new run
         currentToolName: undefined,
+        currentToolKind: undefined,
+        currentToolContent: undefined,
+        currentToolFilePath: undefined,
+        currentToolCommand: undefined,
       }));
 
       try {
@@ -216,12 +229,16 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
             }
             options.onToolCall?.(data as ToolCall);
 
-            // Update message in state and set hasToolCalls + currentToolName
+            // Update message in state and set hasToolCalls + currentToolName + currentToolKind + file/command info
             setState((prev) => {
               const toolCall = data as ToolCall;
               const toolUpdate = {
                 hasToolCalls: true,
                 currentToolName: toolCall.title || toolCall.name,
+                currentToolKind: toolCall.kind,
+                currentToolFilePath: toolCall.filePath,
+                currentToolCommand: toolCall.command,
+                currentToolContent: undefined, // Clear content for new tool call
               };
 
               if (!currentMessageRef.current) {
@@ -259,6 +276,11 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
             }
 
             setState((prev) => {
+              // Update tool content if present
+              const contentUpdate = data.outputContent
+                ? { currentToolContent: data.outputContent }
+                : {};
+
               const msgIdx = prev.messages.findIndex(
                 (m) => m.id === currentMessageRef.current?.id
               );
@@ -274,10 +296,10 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
                     ...newMessages[msgIdx],
                     toolCalls: newToolCalls,
                   };
-                  return { ...prev, messages: newMessages };
+                  return { ...prev, messages: newMessages, ...contentUpdate };
                 }
               }
-              return prev;
+              return { ...prev, ...contentUpdate };
             });
             break;
 
@@ -373,6 +395,10 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
       currentThought: '',
       hasToolCalls: false,
       currentToolName: undefined,
+      currentToolKind: undefined,
+      currentToolContent: undefined,
+      currentToolFilePath: undefined,
+      currentToolCommand: undefined,
     });
   }, [cancel]);
 

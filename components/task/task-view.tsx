@@ -14,7 +14,59 @@ import {
   IconX,
   IconFolder,
   IconLogo,
+  IconSearch,
+  IconGlobe,
+  IconFile,
+  IconEdit,
 } from '@/components/ui/icons';
+
+// Map tool kind from ACP to icon component
+function getToolIcon(kind?: string, size = 14, className = "text-text-tertiary") {
+  switch (kind) {
+    case 'browser':
+      return <IconMonitor size={size} className={className} />;
+    case 'search':
+    case 'web_search':
+      return <IconSearch size={size} className={className} />;
+    case 'file':
+    case 'read':
+    case 'write':
+    case 'edit':
+      return <IconEdit size={size} className={className} />;
+    case 'web':
+    case 'fetch':
+      return <IconGlobe size={size} className={className} />;
+    case 'bash':
+    case 'code':
+    case 'terminal':
+    default:
+      return <IconTerminal size={size} className={className} />;
+  }
+}
+
+// Map tool kind to display name
+function getToolDisplayName(kind?: string): string {
+  switch (kind) {
+    case 'browser':
+      return 'Browser';
+    case 'search':
+    case 'web_search':
+      return 'Search';
+    case 'file':
+    case 'read':
+    case 'write':
+    case 'edit':
+      return 'Editor';
+    case 'web':
+    case 'fetch':
+      return 'Web';
+    case 'bash':
+    case 'code':
+    case 'terminal':
+    default:
+      return 'Terminal';
+  }
+}
 import { SelectionModal } from '@/components/selection-modal';
 import { ModelSelector, AGENT_TYPES, type ModelSelection } from '@/components/model-selector';
 import { useStore } from '@/lib/store';
@@ -59,7 +111,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hasAutoStartedRef = useRef<string | null>(null);
 
-  const { updateTask, addTask, setCurrentTask } = useStore();
+  const { updateTask, addTask, setCurrentTask, setToolState, clearToolState } = useStore();
 
   // Task streaming hook - always get current task from store to handle newly created tasks
   const taskStream = useTaskStream({
@@ -111,6 +163,40 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
       }
     },
   });
+
+  // Sync tool state to store for RightPanelTabs to consume
+  // Only update when we have new tool data (don't clear with undefined)
+  useEffect(() => {
+    // Only update if we have a tool kind - this preserves the last used tool
+    if (taskStream.currentToolKind) {
+      setToolState({
+        kind: taskStream.currentToolKind,
+        content: taskStream.currentToolContent,
+        filePath: taskStream.currentToolFilePath,
+        command: taskStream.currentToolCommand,
+        name: taskStream.currentToolName,
+      });
+    } else if (taskStream.currentToolContent) {
+      // Update content even if kind is temporarily undefined (during updates)
+      setToolState({
+        content: taskStream.currentToolContent,
+      });
+    }
+  }, [
+    taskStream.currentToolKind,
+    taskStream.currentToolContent,
+    taskStream.currentToolFilePath,
+    taskStream.currentToolCommand,
+    taskStream.currentToolName,
+    setToolState,
+  ]);
+
+  // Clear tool state when component unmounts or task changes
+  useEffect(() => {
+    return () => {
+      clearToolState();
+    };
+  }, [task?.id, clearToolState]);
 
   // Auto-start task if pending and hasn't been run yet
   // Check: no assistant messages yet (only user messages or empty)
@@ -224,9 +310,14 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
   const hasToolCalls = taskStream.hasToolCalls ||
     (task?.messages?.some(m => m.toolCalls && m.toolCalls.length > 0) ?? false);
   const currentToolName = taskStream.currentToolName;
+  const currentToolKind = taskStream.currentToolKind;
 
   // Determine if browser is being used (for display purposes)
-  const isBrowserActive = displayBrowserLiveUrl || displayBrowserScreenshotUrl;
+  const isBrowserActive = displayBrowserLiveUrl || displayBrowserScreenshotUrl || currentToolKind === 'browser';
+
+  // Get current progress step for collapsed bar
+  const currentProgressStep = displayProgress.find(p => p.status === 'in_progress') ||
+    displayProgress[displayProgress.length - 1];
 
   const handleCreateTask = async () => {
     if (!input.trim() || isCreatingTask) return;
@@ -657,11 +748,11 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
           {!rightPanelOpen && hasToolCalls && (
             <>
               {previewCollapsed ? (
-                <div className="relative pt-[60px]">
-                  {/* Mini preview - shows browser screenshot if available, otherwise terminal placeholder */}
+                <div className="relative pt-[64px]">
+                  {/* Floating thumbnail - Manus style */}
                   <div
                     onClick={() => onOpenPanel?.('browser')}
-                    className="absolute left-[17px] bottom-[17px] w-[160px] h-[100px] rounded-xl bg-[#363636] border border-[#4a4a4a] overflow-hidden cursor-pointer z-10 pointer-events-auto shadow-sm"
+                    className="absolute left-[17px] bottom-[17px] w-[128px] h-[80px] rounded-xl bg-white border border-[#4a4a4a] overflow-hidden cursor-pointer z-10 pointer-events-auto shadow-lg"
                   >
                     {displayBrowserScreenshotUrl ? (
                       <img
@@ -670,16 +761,16 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="h-full flex flex-col items-center justify-center p-2">
+                      <div className="h-full flex flex-col items-center justify-center p-2 bg-[#f5f5f5]">
                         {isRunning ? (
                           <>
-                            <div className="w-8 h-8 rounded-full border-2 border-accent border-t-transparent animate-spin mb-2" />
-                            <span className="text-[9px] text-text-tertiary">Working...</span>
+                            <div className="w-6 h-6 rounded-full border-2 border-accent border-t-transparent animate-spin mb-1.5" />
+                            <span className="text-[8px] text-gray-500">Working...</span>
                           </>
                         ) : (
                           <>
-                            <IconTerminal size={24} className="text-text-quaternary mb-2" />
-                            <span className="text-[9px] text-text-tertiary">Ready</span>
+                            {getToolIcon(currentToolKind, 20, "text-gray-400")}
+                            <span className="text-[8px] text-gray-500 mt-1.5">Ready</span>
                           </>
                         )}
                       </div>
@@ -687,29 +778,27 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                   </div>
 
                   {/* Thin progress bar */}
-                  <div className="rounded-2xl border border-[#444444] bg-[#2f2f2f] px-4 py-3 pl-[191px] pointer-events-auto shadow-sm">
+                  <div className="rounded-2xl border border-[#444444] bg-[#2f2f2f] px-4 py-3 pl-[160px] pointer-events-auto shadow-sm">
                     <div className="flex items-center gap-3">
                       <div className="flex-1 flex items-center gap-3">
-                        {(() => {
-                          const currentStep = displayProgress.find(p => p.status === 'in_progress') || displayProgress[displayProgress.length - 1];
-                          if (!currentStep) return <span className="text-[13px] text-text-tertiary flex-1">Ready</span>;
-                          return (
-                            <>
-                              {currentStep.status === 'completed' ? (
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-green-500 flex-shrink-0">
-                                  <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
-                              ) : currentStep.status === 'in_progress' ? (
-                                <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin flex-shrink-0" />
-                              ) : (
-                                <div className="w-5 h-5 rounded-full border border-text-quaternary flex-shrink-0" />
-                              )}
-                              <span className="text-[13px] text-text-primary flex-1">
-                                {currentStep.content}
-                              </span>
-                            </>
-                          );
-                        })()}
+                        {currentProgressStep ? (
+                          <>
+                            {currentProgressStep.status === 'completed' ? (
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-green-500 flex-shrink-0">
+                                <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            ) : currentProgressStep.status === 'in_progress' ? (
+                              <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin flex-shrink-0" />
+                            ) : (
+                              <div className="w-5 h-5 rounded-full border border-text-quaternary flex-shrink-0" />
+                            )}
+                            <span className="text-[13px] text-text-primary flex-1 truncate">
+                              {currentProgressStep.content}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-[13px] text-text-tertiary flex-1">Ready</span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-2 flex-shrink-0">
@@ -731,7 +820,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                   <div className="flex items-start gap-4">
                     <div
                       onClick={() => onOpenPanel?.('browser')}
-                      className="relative w-[160px] h-[100px] rounded-xl bg-[#363636] border border-[#4a4a4a] overflow-hidden cursor-pointer group flex-shrink-0 shadow-sm"
+                      className="relative w-[128px] h-[80px] rounded-xl bg-white border border-[#4a4a4a] overflow-hidden cursor-pointer group flex-shrink-0 shadow-sm"
                     >
                       {displayBrowserScreenshotUrl ? (
                         <img
@@ -740,42 +829,38 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="h-full flex flex-col items-center justify-center p-2">
+                        <div className="h-full flex flex-col items-center justify-center p-2 bg-[#f5f5f5]">
                           {isRunning ? (
                             <>
-                              <div className="w-8 h-8 rounded-full border-2 border-accent border-t-transparent animate-spin mb-2" />
-                              <span className="text-[9px] text-text-tertiary">Working...</span>
+                              <div className="w-6 h-6 rounded-full border-2 border-accent border-t-transparent animate-spin mb-1.5" />
+                              <span className="text-[8px] text-gray-500">Working...</span>
                             </>
                           ) : (
                             <>
-                              <IconTerminal size={24} className="text-text-quaternary mb-2" />
-                              <span className="text-[9px] text-text-tertiary">Ready</span>
+                              {getToolIcon(currentToolKind, 20, "text-gray-400")}
+                              <span className="text-[8px] text-gray-500 mt-1.5">Ready</span>
                             </>
                           )}
                         </div>
                       )}
-                      <div className="absolute bottom-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded bg-black/50">
-                        <IconExpand size={14} className="text-white" />
+                      <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded bg-black/50">
+                        <IconExpand size={12} className="text-white" />
                       </div>
                     </div>
 
-                    <div className="flex-1 pt-1">
-                      <h3 className="text-[20px] font-medium text-text-primary mb-2">
+                    <div className="flex-1">
+                      <h3 className="text-[18px] font-medium text-text-primary mb-3">
                         Manus's computer
                       </h3>
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-bg-overlay flex items-center justify-center">
-                          {isBrowserActive ? (
-                            <IconMonitor size={16} className="text-text-secondary" />
-                          ) : (
-                            <IconTerminal size={16} className="text-text-secondary" />
-                          )}
+                        <div className="w-6 h-6 rounded-md bg-[#3a3a3a] flex items-center justify-center">
+                          {getToolIcon(currentToolKind, 14, "text-text-secondary")}
                         </div>
-                        <span className="text-[14px] text-text-secondary">
+                        <span className="text-[13px] text-text-tertiary">
                           {isRunning ? (
-                            <>Manus is using <span className="text-text-primary">{currentToolName || (isBrowserActive ? 'Browser' : 'Terminal')}</span></>
+                            <>Manus is using <span className="text-text-primary font-medium">{getToolDisplayName(currentToolKind)}</span></>
                           ) : (
-                            <>Manus used <span className="text-text-primary">{isBrowserActive ? 'Browser' : 'Terminal'}</span></>
+                            <>Manus used <span className="text-text-primary font-medium">{getToolDisplayName(currentToolKind)}</span></>
                           )}
                         </span>
                       </div>
@@ -798,7 +883,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
                   </div>
 
                   {displayProgress.length > 0 && (
-                    <div className="mt-4 rounded-2xl border border-[#444444] bg-[#363636] p-5">
+                    <div className="mt-4 rounded-2xl border border-[#333333] bg-[#252525] p-5">
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-[15px] font-medium text-text-primary">Task progress</h3>
                         <span className="text-[13px] text-text-tertiary">{completedSteps} / {totalSteps}</span>

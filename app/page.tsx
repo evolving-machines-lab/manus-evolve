@@ -437,8 +437,8 @@ export default function HomePage() {
       />
     </main>
 
-    {/* Right Panel - Reuses RightPanelTabs component */}
-    {showRightPanel && (
+    {/* Right Panel - Reuses RightPanelTabs component, always mounted to avoid flicker */}
+    <div className={showRightPanel ? "" : "hidden"}>
       <RightPanelTabs
         project={null}
         task={null}
@@ -448,7 +448,7 @@ export default function HomePage() {
         onPreTaskFilesChange={handlePreTaskFilesChange}
         onPreTaskFilesAdded={handlePreTaskFilesAdded}
       />
-    )}
+    </div>
     </div>
   );
 }

@@ -1,11 +1,64 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   IconX,
   IconFolder,
   IconMonitor,
+  IconChevronDown,
+  IconTerminal,
+  IconEdit,
+  IconSearch,
+  IconGlobe,
 } from '@/components/ui/icons';
+
+// Map tool kind to icon
+function getToolIcon(kind?: string, size = 16, className = "text-text-tertiary") {
+  switch (kind) {
+    case 'browser':
+      return <IconMonitor size={size} className={className} />;
+    case 'search':
+    case 'web_search':
+      return <IconSearch size={size} className={className} />;
+    case 'file':
+    case 'read':
+    case 'write':
+    case 'edit':
+      return <IconEdit size={size} className={className} />;
+    case 'web':
+    case 'fetch':
+      return <IconGlobe size={size} className={className} />;
+    case 'bash':
+    case 'code':
+    case 'terminal':
+    default:
+      return <IconTerminal size={size} className={className} />;
+  }
+}
+
+// Map tool kind to display name
+function getToolDisplayName(kind?: string): string {
+  switch (kind) {
+    case 'browser':
+      return 'Browser';
+    case 'search':
+    case 'web_search':
+      return 'Search';
+    case 'file':
+    case 'read':
+    case 'write':
+    case 'edit':
+      return 'Editor';
+    case 'web':
+    case 'fetch':
+      return 'Web';
+    case 'bash':
+    case 'code':
+    case 'terminal':
+    default:
+      return 'Terminal';
+  }
+}
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { FilesTab } from './files-tab';
@@ -31,6 +84,12 @@ interface RightPanelTabsProps {
   preTaskFiles?: PreTaskFile[];
   onPreTaskFilesChange?: (files: PreTaskFile[]) => void;
   onPreTaskFilesAdded?: (files: File[]) => void;
+  // Tool state for code/terminal viewers
+  toolKind?: string;
+  toolContent?: string;
+  toolFilePath?: string;
+  toolCommand?: string;
+  toolName?: string;
 }
 
 // Icon for artifacts/output
@@ -44,12 +103,39 @@ function IconOutput({ size = 20, className }: { size?: number; className?: strin
   );
 }
 
-export function RightPanelTabs({ project, task, onClose, defaultTab = 'browser', preTaskFiles, onPreTaskFilesChange, onPreTaskFilesAdded }: RightPanelTabsProps) {
-  const { rightPanelView, setRightPanelView } = useStore();
+export function RightPanelTabs({
+  project,
+  task,
+  onClose,
+  defaultTab = 'browser',
+  preTaskFiles,
+  onPreTaskFilesChange,
+  onPreTaskFilesAdded,
+  toolKind,
+  toolContent,
+  toolFilePath,
+  toolCommand,
+  toolName,
+}: RightPanelTabsProps) {
+  const { rightPanelView, setRightPanelView, toolState } = useStore();
   const [activeTab, setActiveTab] = useState<'files' | 'artifacts' | 'browser'>(defaultTab);
+  const [progressCollapsed, setProgressCollapsed] = useState(false);
+  const isFirstRender = useRef(true);
+
+  // Use props if provided, otherwise fall back to store
+  const effectiveToolKind = toolKind ?? toolState.kind;
+  const effectiveToolContent = toolContent ?? toolState.content;
+  const effectiveToolFilePath = toolFilePath ?? toolState.filePath;
+  const effectiveToolCommand = toolCommand ?? toolState.command;
+  const effectiveToolName = toolName ?? toolState.name;
 
   // Sync activeTab when defaultTab prop changes (e.g., clicking attachment icon)
+  // Skip first render to avoid flicker
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     setActiveTab(defaultTab);
   }, [defaultTab]);
 
@@ -61,30 +147,16 @@ export function RightPanelTabs({ project, task, onClose, defaultTab = 'browser',
   const tabs = [
     { id: 'files' as const, label: 'Files', icon: IconFolder },
     { id: 'artifacts' as const, label: 'Artifacts', icon: IconOutput },
-    { id: 'browser' as const, label: 'Computer', icon: IconMonitor },
+    { id: 'browser' as const, label: 'Manus Computer', icon: IconMonitor },
   ];
 
   return (
     <div className="flex-1 h-full flex flex-col bg-bg-content">
       {/* Panel container with rounded corners */}
       <div className="flex-1 m-3 ml-0 rounded-2xl border border-[#4a4a4a] bg-[#2f2f2f] overflow-hidden flex flex-col shadow-sm">
-        {/* Header with tabs */}
-        <div className="border-b border-border-subtle">
-          {/* Title row */}
-          <div className="h-12 px-4 flex items-center justify-between">
-            <span className="text-[15px] font-medium text-text-primary">
-              {project?.name || task?.title || 'Task'}
-            </span>
-            <button
-              onClick={onClose}
-              className="p-2 text-text-tertiary hover:text-text-secondary transition-colors"
-            >
-              <IconX size={16} />
-            </button>
-          </div>
-
-          {/* Tab bar */}
-          <div className="px-4 flex items-center gap-1">
+        {/* Tab bar at top with close button */}
+        <div className="px-4 py-3 border-b border-border-subtle flex items-center justify-between">
+          <div className="flex items-center gap-2">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -93,22 +165,28 @@ export function RightPanelTabs({ project, task, onClose, defaultTab = 'browser',
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
                   className={cn(
-                    'flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium transition-all rounded-t-lg',
+                    'flex items-center gap-2 px-4 py-2.5 text-[14px] font-medium transition-all rounded-lg',
                     isActive
-                      ? 'bg-bg-overlay text-text-primary border-b-2 border-accent'
-                      : 'text-text-tertiary hover:text-text-secondary hover:bg-bg-overlay/50'
+                      ? 'bg-[#454545] text-white'
+                      : 'text-[#888] hover:text-white hover:bg-[#3a3a3a]'
                   )}
                 >
-                  <Icon size={16} />
+                  <Icon size={18} />
                   <span>{tab.label}</span>
                 </button>
               );
             })}
           </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-[#888] hover:text-white hover:bg-[#3a3a3a] rounded-lg transition-colors"
+          >
+            <IconX size={18} />
+          </button>
         </div>
 
         {/* Tab content */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden relative">
           {activeTab === 'files' && project && (
             <FilesTab project={project} task={task} />
           )}
@@ -127,46 +205,77 @@ export function RightPanelTabs({ project, task, onClose, defaultTab = 'browser',
             <ArtifactsTab task={task} />
           )}
           {activeTab === 'browser' && (
-            <BrowserTab task={task} />
+            <BrowserTab
+              task={task}
+              toolKind={effectiveToolKind}
+              toolContent={effectiveToolContent}
+              toolFilePath={effectiveToolFilePath}
+              toolCommand={effectiveToolCommand}
+              toolName={effectiveToolName}
+            />
           )}
-        </div>
 
-        {/* Task progress section at bottom - matches preview panel styling */}
-        {task && task.progress.length > 0 && (
-          <div className="p-4 pt-0">
-            <div className="rounded-2xl border border-[#444444] bg-[#363636] p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[15px] font-medium text-text-primary">Task progress</h3>
-                <span className="text-[13px] text-text-tertiary">
-                  {task.progress.filter(p => p.status === 'completed').length} / {task.progress.length}
-                </span>
-              </div>
-              <div className="space-y-4">
-                {task.progress.map((item) => (
-                  <div key={item.id} className="flex items-start gap-3">
-                    {item.status === 'completed' ? (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-green-500 mt-0.5 flex-shrink-0">
-                        <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    ) : item.status === 'in_progress' ? (
-                      <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin mt-0.5 flex-shrink-0" />
-                    ) : (
-                      <div className="w-5 h-5 rounded-full border border-text-quaternary mt-0.5 flex-shrink-0" />
-                    )}
-                    <span className={cn(
-                      'text-[13px] leading-relaxed',
-                      item.status === 'completed' ? 'text-text-primary' :
-                      item.status === 'in_progress' ? 'text-text-primary' :
-                      'text-text-tertiary'
-                    )}>
-                      {item.content}
+          {/* Task progress overlay at bottom */}
+          {task && task.progress.length > 0 && (
+            <div className="absolute bottom-0 left-0 right-0 p-4">
+              <div className="rounded-xl border border-[#4a4a4a] bg-[#2f2f2f]">
+                <div className="flex items-center justify-between p-4">
+                  <h3 className="text-[15px] font-medium text-text-primary">Task progress</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] text-text-tertiary">
+                      {task.progress.filter(p => p.status === 'completed').length} / {task.progress.length}
                     </span>
+                    <button
+                      onClick={() => setProgressCollapsed(!progressCollapsed)}
+                      className="p-1 rounded hover:bg-[#3a3a3a] transition-colors"
+                    >
+                      <IconChevronDown
+                        size={18}
+                        className={cn(
+                          "text-text-tertiary transition-transform",
+                          progressCollapsed && "rotate-180"
+                        )}
+                      />
+                    </button>
                   </div>
-                ))}
+                </div>
+                {!progressCollapsed && (
+                  <div className="space-y-4 px-5 pb-5">
+                    {task.progress.map((item) => (
+                      <div key={item.id} className="flex items-start gap-3">
+                        {item.status === 'completed' ? (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-green-500 mt-0.5 flex-shrink-0">
+                            <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        ) : item.status === 'in_progress' ? (
+                          <div className="w-5 h-5 rounded-full bg-blue-500 mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-text-quaternary mt-0.5 flex-shrink-0">
+                            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
+                            <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                        <div className="flex-1">
+                          <span className={cn(
+                            'text-[13px] leading-relaxed block',
+                            item.status === 'completed' ? 'text-text-primary' :
+                            item.status === 'in_progress' ? 'text-text-primary' :
+                            'text-text-tertiary'
+                          )}>
+                            {item.content}
+                          </span>
+                          {item.status === 'in_progress' && (
+                            <span className="text-[12px] text-text-quaternary mt-0.5 block">Using browser</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

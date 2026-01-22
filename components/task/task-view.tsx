@@ -961,7 +961,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen, onClosePa
                       {/* Header with logo */}
                       <div className="flex items-center gap-3 mb-3">
                         <IconLogo size={24} className="text-text-primary" />
-                        <span className="text-[17px] font-semibold text-text-primary">manus</span>
+                        <span className="text-[17px] font-semibold text-text-primary">Manus Evolve</span>
                       </div>
                       {/* Message content - group into collapsible ActivityLog with interleaved text */}
                       {(() => {
@@ -1054,7 +1054,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen, onClosePa
                   {/* Header with logo */}
                   <div className="flex items-center gap-3 mb-3">
                     <IconLogo size={24} className="text-text-primary" />
-                    <span className="text-[17px] font-semibold text-text-primary">manus</span>
+                    <span className="text-[17px] font-semibold text-text-primary">Manus Evolve</span>
                   </div>
                   {/* Loading indicator - below header while waiting for content */}
                   <div className="mt-2">
@@ -1083,7 +1083,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen, onClosePa
                   {!displayMessages.some(m => m.role === 'assistant') && (
                     <div className="flex items-center gap-3 mb-3">
                       <IconLogo size={24} className="text-text-primary" />
-                      <span className="text-[17px] font-semibold text-text-primary">manus</span>
+                      <span className="text-[17px] font-semibold text-text-primary">Manus Evolve</span>
                     </div>
                   )}
                   <div className="flex items-center gap-2 mt-2">

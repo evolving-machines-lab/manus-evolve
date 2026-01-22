@@ -44,7 +44,7 @@ export function BrowserTab({
       <div className={`${containerClass} p-4`}>
         <div className="h-full flex flex-col rounded-xl overflow-hidden shadow-lg border border-[#3a3a3a]">
           {/* Browser header - macOS style */}
-          <div className="px-4 py-3 bg-[#252525] flex items-center gap-3 border-b border-[#1a1a1a]">
+          <div className="px-4 py-2 bg-[#252525] flex items-center gap-3 border-b border-[#1a1a1a]">
             {/* Traffic lights */}
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-[#ff5f57] shadow-inner" />
@@ -102,7 +102,7 @@ export function BrowserTab({
       <div className={`${containerClass} p-4`}>
         <div className="h-full flex flex-col rounded-xl overflow-hidden shadow-lg border border-[#3a3a3a]">
           {/* Browser header - macOS style */}
-          <div className="px-4 py-3 bg-[#252525] flex items-center gap-3 border-b border-[#1a1a1a]">
+          <div className="px-4 py-2 bg-[#252525] flex items-center gap-3 border-b border-[#1a1a1a]">
             {/* Traffic lights */}
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-[#ff5f57] shadow-inner" />

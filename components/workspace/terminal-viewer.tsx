@@ -61,7 +61,7 @@ export function TerminalViewer({ content, command, title, isRunning = false }: T
   return (
     <div className="h-full flex flex-col rounded-xl overflow-hidden shadow-lg border border-[#3a3a3a]">
       {/* Terminal header - macOS style */}
-      <div className="px-4 py-3 bg-[#252525] flex items-center gap-3 border-b border-[#1a1a1a]">
+      <div className="px-4 py-2 bg-[#252525] flex items-center gap-3 border-b border-[#1a1a1a]">
         {/* Traffic lights */}
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-[#ff5f57] shadow-inner" />
@@ -87,10 +87,10 @@ export function TerminalViewer({ content, command, title, isRunning = false }: T
           </div>
         ) : (
           /* Empty terminal - just show prompt */
-          <div className="whitespace-pre-wrap">
+          <div className="whitespace-pre-wrap flex items-center">
             <span className="text-emerald-400">ubuntu@sandbox:~</span>
             <span className="text-white"> $ </span>
-            <span className="animate-pulse">▋</span>
+            <span className="w-[6px] h-[15px] bg-[#ccc]" />
           </div>
         )}
         {/* Show content or status */}

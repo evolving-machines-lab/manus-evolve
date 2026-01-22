@@ -252,8 +252,8 @@ export default function HomePage() {
   return (
     <div className="flex-1 flex">
     <main className={cn(
-      "flex-1 flex flex-col px-6 relative bg-bg-content transition-all duration-300",
-      showRightPanel ? "mr-0" : ""
+      "flex flex-col px-6 relative bg-bg-content transition-all duration-300",
+      showRightPanel ? "w-1/2" : "flex-1"
     )}>
         {/* Model selector - top left */}
         <div className="absolute top-0 left-0 right-0 h-14 flex items-center px-4 gap-3">
@@ -438,7 +438,7 @@ export default function HomePage() {
     </main>
 
     {/* Right Panel - Reuses RightPanelTabs component, always mounted to avoid flicker */}
-    <div className={showRightPanel ? "" : "hidden"}>
+    <div className={showRightPanel ? "w-1/2 flex flex-col overflow-hidden" : "hidden"}>
       <RightPanelTabs
         project={null}
         task={null}

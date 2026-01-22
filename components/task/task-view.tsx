@@ -210,8 +210,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
       updateTask(task.id, {
         status: 'running',
         progress: [],  // Clear old progress
-        browserLiveUrl: undefined,  // Clear old browser state
-        browserScreenshotUrl: undefined,
+        browserLiveUrl: undefined,  // Clear expired live URL, keep screenshot
       });
       taskStream.runTask(task.id);
     }
@@ -264,13 +263,12 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen }: TaskVie
       timestamp: new Date().toISOString(),
     };
 
-    // Optimistic update - clear progress and browser state for new run
+    // Optimistic update - clear progress for new run, keep screenshot until new tool call
     updateTask(task.id, {
       messages: [...task.messages, userMessage],
       status: 'running',
       progress: [],  // Clear old progress from previous runs
-      browserLiveUrl: undefined,  // Clear old browser state
-      browserScreenshotUrl: undefined,
+      browserLiveUrl: undefined,  // Clear expired live URL, keep screenshot
       title: task.title === 'New Task' ? input.trim().slice(0, 50) : task.title,
     });
 

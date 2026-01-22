@@ -232,13 +232,15 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
             // Update message in state and set hasToolCalls + currentToolName + currentToolKind + file/command info
             setState((prev) => {
               const toolCall = data as ToolCall;
+              // For edit tools, content may come in tool_call (diff.newText)
+              // For execute tools, content comes later in tool_call_update (if at all)
               const toolUpdate = {
                 hasToolCalls: true,
                 currentToolName: toolCall.title || toolCall.name,
                 currentToolKind: toolCall.kind,
                 currentToolFilePath: toolCall.filePath,
                 currentToolCommand: toolCall.command,
-                currentToolContent: undefined, // Clear content for new tool call
+                currentToolContent: toolCall.outputContent || undefined,
               };
 
               if (!currentMessageRef.current) {

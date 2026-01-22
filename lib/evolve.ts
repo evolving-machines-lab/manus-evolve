@@ -201,13 +201,29 @@ export function setupEventHandlers(evolve: Evolve, callbacks: EvolveCallbacks): 
           // Extract file path and command from rawInput
           let filePath: string | undefined;
           let command: string | undefined;
+          let outputContent: string | undefined;
           const rawInput = update.rawInput as Record<string, unknown> | undefined;
 
           if (rawInput) {
-            // File operations: path, file_path, filename
-            filePath = (rawInput.path || rawInput.file_path || rawInput.filename) as string | undefined;
+            // File operations: path, file_path, filename, content
+            filePath = (rawInput.path || rawInput.file_path || rawInput.filename || rawInput.file) as string | undefined;
             // Terminal operations: command, cmd
             command = (rawInput.command || rawInput.cmd) as string | undefined;
+            // File content from rawInput (for edit/write)
+            if (rawInput.content && typeof rawInput.content === 'string') {
+              outputContent = rawInput.content;
+            }
+          }
+
+          // Also extract content from tool_call content array (for edit tools with diff)
+          if (update.content && Array.isArray(update.content)) {
+            for (const c of update.content) {
+              // Handle diff content: { type: "diff", path, oldText, newText }
+              if (c.type === 'diff' && c.newText) {
+                outputContent = c.newText;
+                if (c.path) filePath = c.path;
+              }
+            }
           }
 
           callbacks.onToolCall({
@@ -220,6 +236,7 @@ export function setupEventHandlers(evolve: Evolve, callbacks: EvolveCallbacks): 
             input: update.rawInput,
             filePath,
             command,
+            outputContent,
             locations: update.locations as ToolCallLocation[],
           });
         }

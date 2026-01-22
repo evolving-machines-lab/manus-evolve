@@ -13,24 +13,23 @@ import {
 } from '@/components/ui/icons';
 
 // Map tool kind to icon
+// SDK sends: read, edit, delete, move, search, execute, think, fetch, switch_mode, other
 function getToolIcon(kind?: string, size = 16, className = "text-text-tertiary") {
   switch (kind) {
     case 'browser':
-      return <IconMonitor size={size} className={className} />;
-    case 'search':
-    case 'web_search':
-      return <IconSearch size={size} className={className} />;
-    case 'file':
-    case 'read':
-    case 'write':
-    case 'edit':
-      return <IconEdit size={size} className={className} />;
-    case 'web':
     case 'fetch':
       return <IconGlobe size={size} className={className} />;
+    case 'search':
+      return <IconSearch size={size} className={className} />;
+    case 'read':
+    case 'edit':
+    case 'delete':
+    case 'move':
+      return <IconEdit size={size} className={className} />;
+    case 'execute':
     case 'bash':
-    case 'code':
     case 'terminal':
+    case 'code':
     default:
       return <IconTerminal size={size} className={className} />;
   }
@@ -40,21 +39,19 @@ function getToolIcon(kind?: string, size = 16, className = "text-text-tertiary")
 function getToolDisplayName(kind?: string): string {
   switch (kind) {
     case 'browser':
+    case 'fetch':
       return 'Browser';
     case 'search':
-    case 'web_search':
       return 'Search';
-    case 'file':
     case 'read':
-    case 'write':
     case 'edit':
+    case 'delete':
+    case 'move':
       return 'Editor';
-    case 'web':
-    case 'fetch':
-      return 'Web';
+    case 'execute':
     case 'bash':
-    case 'code':
     case 'terminal':
+    case 'code':
     default:
       return 'Terminal';
   }

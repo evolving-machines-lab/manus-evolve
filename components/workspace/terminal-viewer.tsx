@@ -64,14 +64,19 @@ export function TerminalViewer({ content, command, title }: TerminalViewerProps)
 
       {/* Terminal content */}
       <div className="flex-1 overflow-auto p-4 font-mono text-[13px] leading-relaxed bg-[#1e1e1e]">
-        {/* Show command if provided and not in content */}
-        {command && !content.includes(command) && (
+        {/* Show command if provided */}
+        {command && (
           <div className="whitespace-pre-wrap mb-2">
             <span className="text-green-500">ubuntu@sandbox:~ $</span>
             <span className="text-white"> {command}</span>
           </div>
         )}
-        {parsedContent}
+        {/* Show content or loading state */}
+        {content ? (
+          parsedContent
+        ) : command ? (
+          <div className="text-text-tertiary animate-pulse">Running...</div>
+        ) : null}
       </div>
     </div>
   );

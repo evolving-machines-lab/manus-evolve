@@ -31,9 +31,10 @@ export function BrowserTab({
   const containerClass = "h-full flex flex-col bg-[#2f2f2f]";
 
   // Determine which view to show based on tool kind
-  const isEditorTool = toolKind === 'file' || toolKind === 'read' || toolKind === 'write' || toolKind === 'edit';
-  const isTerminalTool = toolKind === 'bash' || toolKind === 'terminal' || toolKind === 'code';
-  const isBrowserTool = toolKind === 'browser';
+  // SDK sends: read, edit, delete, move, search, execute, think, fetch, switch_mode, other
+  const isEditorTool = toolKind === 'read' || toolKind === 'edit' || toolKind === 'delete' || toolKind === 'move';
+  const isTerminalTool = toolKind === 'execute' || toolKind === 'bash' || toolKind === 'terminal' || toolKind === 'code';
+  const isBrowserTool = toolKind === 'browser' || toolKind === 'fetch';
 
   // Priority: Browser live > Tool content > Browser screenshot > Empty
   // If browser tool with live URL, show browser
@@ -69,24 +70,24 @@ export function BrowserTab({
     }
   }
 
-  // Show editor for file operations
-  if (isEditorTool && hasToolContent) {
+  // Show editor for file operations (show even without content if we have file path)
+  if (isEditorTool && (hasToolContent || toolFilePath)) {
     return (
       <div className={`${containerClass} p-4`}>
         <CodeViewer
-          content={toolContent}
+          content={toolContent || '// Loading...'}
           filePath={toolFilePath}
         />
       </div>
     );
   }
 
-  // Show terminal for bash/terminal operations
-  if (isTerminalTool && hasToolContent) {
+  // Show terminal for bash/terminal operations (show even without content if we have command)
+  if (isTerminalTool && (hasToolContent || toolCommand)) {
     return (
       <div className={`${containerClass} p-4`}>
         <TerminalViewer
-          content={toolContent}
+          content={toolContent || ''}
           command={toolCommand}
           title={toolName}
         />

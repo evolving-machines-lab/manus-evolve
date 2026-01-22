@@ -318,6 +318,9 @@ export function RightPanelTabs({
                           )}>
                             {item.content}
                           </span>
+                          {item.status === 'in_progress' && (
+                            <span className="text-[12px] text-text-quaternary mt-0.5 block">Using browser</span>
+                          )}
                         </div>
                       </div>
                     ))}

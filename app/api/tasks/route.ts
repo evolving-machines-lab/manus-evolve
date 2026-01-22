@@ -64,14 +64,8 @@ export async function GET(request: NextRequest) {
       title: t.title,
       status: t.status,
       prompt: t.prompt,
-      messages: t.messages.map((m) => ({
-        id: m.id,
-        role: m.role,
-        contentType: m.contentType,
-        content: m.content,
-        mimeType: m.mimeType,
-        timestamp: m.createdAt,
-        toolCalls: m.toolCalls.map((tc) => ({
+      messages: t.messages.map((m) => {
+        const toolCalls = m.toolCalls.map((tc) => ({
           id: tc.id,
           toolCallId: tc.toolCallId,
           name: tc.name,
@@ -80,9 +74,43 @@ export async function GET(request: NextRequest) {
           status: tc.status,
           input: tc.input ? JSON.parse(tc.input) : undefined,
           output: tc.output ? JSON.parse(tc.output) : undefined,
+          outputContent: tc.outputContent,
+          filePath: tc.filePath,
+          command: tc.command,
           locations: tc.locations ? JSON.parse(tc.locations) : undefined,
-        })),
-      })),
+        }));
+
+        // Hydrate parts: replace toolCallId references with actual tool call objects
+        let parts = undefined;
+        if (m.parts) {
+          try {
+            const storedParts = JSON.parse(m.parts) as Array<
+              { type: 'text'; content: string } | { type: 'tool_call'; toolCallId: string }
+            >;
+            parts = storedParts.map((part) => {
+              if (part.type === 'text') {
+                return part;
+              } else {
+                const tc = toolCalls.find((t) => t.toolCallId === part.toolCallId);
+                return tc ? { type: 'tool_call' as const, toolCall: tc } : null;
+              }
+            }).filter(Boolean);
+          } catch {
+            // Invalid JSON, ignore parts
+          }
+        }
+
+        return {
+          id: m.id,
+          role: m.role,
+          contentType: m.contentType,
+          content: m.content,
+          mimeType: m.mimeType,
+          timestamp: m.createdAt,
+          toolCalls,
+          parts,
+        };
+      }),
       progress: t.progressItems.map((p) => ({
         id: p.id,
         content: p.content,

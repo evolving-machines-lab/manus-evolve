@@ -48,6 +48,8 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
     currentToolContent: undefined,
     currentToolFilePath: undefined,
     currentToolCommand: undefined,
+    browserLiveUrl: undefined,
+    browserScreenshotUrl: undefined,
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -85,6 +87,9 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
         currentToolContent: undefined,
         currentToolFilePath: undefined,
         currentToolCommand: undefined,
+        // Clear browser URLs for new run (will be set by browser_url events)
+        browserLiveUrl: undefined,
+        browserScreenshotUrl: undefined,
       }));
 
       try {
@@ -463,6 +468,8 @@ export function useTaskStream(options: UseTaskStreamOptions = {}) {
       currentToolContent: undefined,
       currentToolFilePath: undefined,
       currentToolCommand: undefined,
+      browserLiveUrl: undefined,
+      browserScreenshotUrl: undefined,
     });
   }, [cancel]);
 

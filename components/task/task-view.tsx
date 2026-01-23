@@ -1424,6 +1424,7 @@ export function TaskView({ task, project, onOpenPanel, rightPanelOpen, onClosePa
             toolCommand={currentToolCommand}
             browserLiveUrl={displayBrowserLiveUrl}
             browserScreenshotUrl={displayBrowserScreenshotUrl}
+            isRunning={taskStream.isRunning || task?.status === 'running'}
           />
         </div>
       </>

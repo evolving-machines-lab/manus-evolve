@@ -93,6 +93,8 @@ interface RightPanelTabsProps {
   toolCommand?: string;
   browserLiveUrl?: string;
   browserScreenshotUrl?: string;
+  // Streaming running state - includes taskStream.isRunning, not just task.status
+  isRunning?: boolean;
 }
 
 // Icon for artifacts/output
@@ -123,6 +125,7 @@ export function RightPanelTabs({
   toolCommand: streamingToolCommand,
   browserLiveUrl: streamingBrowserLiveUrl,
   browserScreenshotUrl: streamingBrowserScreenshotUrl,
+  isRunning: streamingIsRunning,
 }: RightPanelTabsProps) {
   const { rightPanelView, setRightPanelView, toolState } = useStore();
   const [activeTab, setActiveTab] = useState<'files' | 'artifacts' | 'browser'>(defaultTab);
@@ -137,7 +140,8 @@ export function RightPanelTabs({
     return allToolCalls.length > 0 ? allToolCalls[allToolCalls.length - 1] : null;
   })();
 
-  const isTaskRunning = task?.status === 'running';
+  // Use streaming isRunning prop (includes taskStream.isRunning), fallback to task status
+  const isTaskRunning = streamingIsRunning ?? task?.status === 'running';
 
   // Tool state priority: streaming props (direct from TaskView) > store > task data
   // When rendered inside TaskView, streaming props are provided (same values as preview)

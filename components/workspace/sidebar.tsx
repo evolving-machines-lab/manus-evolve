@@ -439,6 +439,18 @@ export function Sidebar() {
           )}
         </button>
         <Link
+          href="/board"
+          className={cn(
+            "flex items-center w-full rounded-xl text-text-primary hover:bg-[#2a2a2a] transition-all",
+            sidebarCollapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5",
+            pathname === '/board' && 'bg-[#2a2a2a]'
+          )}
+          title={sidebarCollapsed ? "Board" : undefined}
+        >
+          <IconGrid size={18} className="shrink-0" />
+          {!sidebarCollapsed && <span className="text-[15px]">Board</span>}
+        </Link>
+        <Link
           href="/settings"
           className={cn(
             "flex items-center w-full rounded-xl text-text-primary hover:bg-[#2a2a2a] transition-all",

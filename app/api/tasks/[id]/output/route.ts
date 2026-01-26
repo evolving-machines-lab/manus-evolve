@@ -56,6 +56,7 @@ export async function GET(
         path,
         type,
         size,
+        content: contentToBuffer(content),
         createdAt: new Date().toISOString(),
       }).run();
 
@@ -75,6 +76,15 @@ export async function GET(
       { status: 500 }
     );
   }
+}
+
+// Helper to convert Evolve content types to Buffer
+function contentToBuffer(content: string | Uint8Array | ArrayBuffer | Buffer): Buffer {
+  if (Buffer.isBuffer(content)) return content;
+  if (typeof content === 'string') return Buffer.from(content, 'utf-8');
+  if (content instanceof ArrayBuffer) return Buffer.from(content);
+  if (content instanceof Uint8Array) return Buffer.from(content);
+  throw new Error('Unsupported content type');
 }
 
 // Helper to determine file type

@@ -55,20 +55,31 @@ function ArtifactIcon({ type, className }: { type: string; className?: string })
 export function ArtifactsTab({ task }: ArtifactsTabProps) {
   const artifacts = task?.artifacts || [];
 
-  const handleDownload = (artifact: Artifact) => {
-    // Create download link
-    const content = artifact.content;
-    if (!content) return;
+  const handleDownload = async (artifact: Artifact) => {
+    try {
+      // Fetch artifact content from download endpoint
+      const response = await fetch(`/api/tasks/${task?.id}/artifacts/${artifact.id}`);
 
-    const blob = new Blob([content], { type: artifact.type });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = artifact.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+      if (!response.ok) {
+        console.error('Failed to download artifact');
+        return;
+      }
+
+      // Create blob from response
+      const blob = await response.blob();
+
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = artifact.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading artifact:', error);
+    }
   };
 
   if (!task) {

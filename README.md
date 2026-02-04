@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="logo/demo.gif" alt="Demo" width="700">
+  <video src="https://github.com/evolving-machines-lab/manus-evolve/raw/main/logo/demo.mp4" width="700" autoplay loop muted playsinline></video>
 </p>
 
 ```bash

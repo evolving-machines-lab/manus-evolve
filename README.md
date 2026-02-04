@@ -1,20 +1,24 @@
-# Manus Evolve
+<p align="center">
+  <h1 align="center">Manus Evolve</h1>
+</p>
 
-> **Experimental** — This project is under active development. Expect bugs, breaking changes, and incomplete features. Contributions and feedback welcome!
+<p align="center">
+  AI agent workspace for running Claude, Codex, Gemini, and Qwen in secure sandboxes.
+</p>
 
-AI agent workspace for running Claude, Codex, Gemini, and Qwen in secure sandboxes.
+<p align="center">
+  <b>Experimental</b> — Expect bugs, breaking changes, and incomplete features. Contributions welcome!
+</p>
 
----
+<br>
 
-### Built with [Evolve SDK](https://github.com/evolving-machines-lab/evolve)
-
-The open-source framework for orchestrating AI agents at scale.
+<p align="center">
+  Built with <a href="https://github.com/evolving-machines-lab/evolve"><b>Evolve SDK</b></a> — the open-source framework for orchestrating AI agents at scale.
+</p>
 
 ```bash
 npm install @evolvingmachines/sdk
 ```
-
----
 
 ## Setup
 

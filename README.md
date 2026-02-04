@@ -6,6 +6,8 @@
   A version of <a href="https://manus.im">Manus</a> powered by the <a href="https://github.com/evolving-machines-lab/evolve"><b>Evolve SDK</b></a>
 </p>
 
+<br>
+
 <p align="center">
   <img src="logo/demo.gif" alt="Demo" width="700">
 </p>

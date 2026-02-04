@@ -30,8 +30,8 @@ npm run dev
 
 ## Features
 
-- **Agents**: Claude, Codex, Gemini, Qwen
-- **Skills**: PDF, DOCX, PPTX, XLSX, browser automation, research tools
+- **Agents**: Claude Code, Codex CLI, Gemini CLI, Qwen Code
+- **Skills**: PDF, DOCX, PPTX, XLSX, browser automation, and much more
 - **Integrations**: GitHub, Gmail, Slack, Notion, and 1000+ via Composio
 
 ## Usage

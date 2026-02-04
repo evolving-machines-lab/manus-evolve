@@ -3,7 +3,11 @@
 </p>
 
 <p align="center">
-  A version of <a href="https://manus.im">Manus</a> powered by the <a href="https://github.com/evolving-machines-lab/evolve"><b>Evolve SDK</b></a>
+  A version of <a href="https://manus.im">Manus</a> powered by Claude Code, Codex CLI, Gemini CLI, Qwen Code
+</p>
+
+<p align="center">
+  Built with <a href="https://github.com/evolving-machines-lab/evolve"><b>Evolve SDK</b></a>
 </p>
 
 <br>

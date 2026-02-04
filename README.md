@@ -16,6 +16,10 @@
   Built with <a href="https://github.com/evolving-machines-lab/evolve"><b>Evolve SDK</b></a> — the open-source framework for orchestrating AI agents at scale.
 </p>
 
+<p align="center">
+  <img src="logo/demo.gif" alt="Demo" width="700">
+</p>
+
 ```bash
 npm install @evolvingmachines/sdk
 ```

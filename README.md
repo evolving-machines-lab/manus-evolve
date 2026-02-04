@@ -3,26 +3,12 @@
 </p>
 
 <p align="center">
-  AI agent workspace for running Claude, Codex, Gemini, and Qwen in secure sandboxes.
-</p>
-
-<p align="center">
-  <b>Experimental</b> — Expect bugs, breaking changes, and incomplete features. Contributions welcome!
-</p>
-
-<br>
-
-<p align="center">
-  Built with <a href="https://github.com/evolving-machines-lab/evolve"><b>Evolve SDK</b></a> — the open-source framework for orchestrating AI agents at scale.
+  A version of <a href="https://manus.im">Manus</a> powered by the <a href="https://github.com/evolving-machines-lab/evolve"><b>Evolve SDK</b></a>
 </p>
 
 <p align="center">
   <img src="logo/demo.gif" alt="Demo" width="700">
 </p>
-
-```bash
-npm install @evolvingmachines/sdk
-```
 
 ## Setup
 

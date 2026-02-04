@@ -2,7 +2,19 @@
 
 > **Experimental** — This project is under active development. Expect bugs, breaking changes, and incomplete features. Contributions and feedback welcome!
 
-AI agent workspace powered by the [Evolve SDK](https://github.com/evolving-machines-lab/evolve).
+AI agent workspace for running Claude, Codex, Gemini, and Qwen in secure sandboxes.
+
+---
+
+### Built with [Evolve SDK](https://github.com/evolving-machines-lab/evolve)
+
+The open-source framework for orchestrating AI agents at scale.
+
+```bash
+npm install @evolvingmachines/sdk
+```
+
+---
 
 ## Setup
 

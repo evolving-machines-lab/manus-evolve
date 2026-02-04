@@ -1,5 +1,7 @@
 # Manus Evolve
 
+> **Experimental** — This project is under active development. Expect bugs, breaking changes, and incomplete features. Contributions and feedback welcome!
+
 AI agent workspace powered by the [Evolve SDK](https://github.com/evolving-machines-lab/evolve).
 
 ## Setup

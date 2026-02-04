@@ -36,7 +36,7 @@ npm run dev
 
 - **Agents**: Claude Code, Codex CLI, Gemini CLI, Qwen Code
 - **Skills**: PDF, DOCX, PPTX, XLSX, browser automation, and much more
-- **Integrations**: GitHub, Gmail, Slack, Notion, and 1000+ via Composio
+- **Integrations**: GitHub, Gmail, Slack, Notion, and 1000+ via Composio managed Auth
 
 ## Usage
 

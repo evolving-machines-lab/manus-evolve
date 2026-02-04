@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo/manus-evolve-logo.png" alt="Manus Evolve" height="200">
+  <img src="logo/manus-evolve-logo.png" alt="Manus Evolve" width="700">
 </p>
 
 <p align="center">
